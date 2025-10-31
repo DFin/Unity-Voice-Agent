@@ -244,6 +244,13 @@ namespace DFIN.VoiceAgent.OpenAI
                             activeResponses.Remove(responseId);
                         }
                         break;
+                    case "input_audio_buffer.speech_started":
+                        if (logAudioEvents)
+                        {
+                            Debug.Log("[OpenAI Realtime] input_audio_buffer.speech_started", this);
+                        }
+                        audioPlayer?.Clear();
+                        break;
                 }
             }
             catch (Exception)
