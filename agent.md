@@ -9,6 +9,8 @@ Purpose: give human collaborators and coding agents a quick reference on how to 
   - `README.md` (student install/usage updates)
   - `Documentation~/` manuals for student-facing guides
   - `DEVELOPMENT.md` for contributor workflow changes
+- Keep dependency notes current (NativeWebSocket, Newtonsoft JSON, others as added) so new contributors install the correct tooling.
+- Configuration assets should remain in `Assets/VoiceAgent/Resources/VoiceAgentSettings.asset`; always update the editor tooling if the schema changes and remind users that credentials are stored in plain text.
 - Prefer incremental commits with clear messages; never rewrite user-made history.
 
 ## Coding Guidelines
@@ -22,4 +24,3 @@ Purpose: give human collaborators and coding agents a quick reference on how to 
 - When unsure about scope, pause and ask the project owner rather than assuming.
 
 Following these rules keeps the repo friendly for both students and future automation runs.
-

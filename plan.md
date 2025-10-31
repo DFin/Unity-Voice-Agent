@@ -7,19 +7,20 @@
 - Favor minimal dependencies and built-in Unity systems unless a clear benefit outweighs onboarding cost.
 
 ## Phase 0 – Repository & Package Scaffolding
-- [ ] Convert project folder into a Unity package layout (`Packages/com.student.voiceagent`) while keeping sample project assets for rapid testing.
-- [ ] Establish assembly definitions for runtime, editor, and sample code to keep dependencies clean.
-- [ ] Set up baseline documentation skeleton (`README.md`, `DEVELOPMENT.md`, `plan.md`) and licensing.
-- [ ] Keep API-specific references under `docs/` (e.g., OpenAI GPT Realtime, ElevenLabs) synced with implementation changes and contributor notes (`agent.md`).
-- [ ] Configure package metadata (display name, description, versioning strategy, UPM-compatible structure).
+- [x] Convert project folder into a Unity package layout (`Packages/com.dfin.voiceagent`) while keeping sample project assets for rapid testing.
+- [x] Establish assembly definitions for runtime, editor, and sample code to keep dependencies clean.
+- [x] Set up baseline documentation skeleton (`README.md`, `DEVELOPMENT.md`, `plan.md`) and licensing.
+- [x] Keep API-specific references under `docs/` (e.g., OpenAI GPT Realtime, ElevenLabs) synced with implementation changes and contributor notes (`agent.md`).
+- [x] Configure package metadata (display name, description, versioning strategy, UPM-compatible structure).
 
 ## Phase 1 – Core Realtime Voice Loop (OpenAI First Priority)
-- [ ] Implement configuration assets & editor window for API keys and session params (no scene inspector reliance).
+- [x] Implement configuration assets & editor window for API keys and session params (no scene inspector reliance).
 - [ ] Create WebSocket client wrapper tailored to OpenAI GPT Realtime streaming (handles authentication, reconnects, event callbacks).
 - [ ] Add microphone capture component (Unity `Microphone` API fallback, with extensibility for other input systems).
 - [ ] Implement audio playback pipeline (PCM decoding, `AudioSource` streaming) with optional spatialization flag for VR targets.
 - [ ] Build minimal runtime controller prefab that wires config -> mic capture -> OpenAI streaming -> audio playback; unit/manual tests via console logging only (no visuals yet).
 - [ ] Provide lightweight debugging hooks (logging categories, connection status) for students troubleshooting auth/network issues.
+- [x] Document dependency setup (NativeWebSocket, Newtonsoft JSON) and keep installation instructions aligned with package requirements.
 
 ## Phase 2 – ElevenLabs Voice Output Integration
 - [ ] Reuse WebSocket/shared transport layer where possible; isolate ElevenLabs-specific session handling.

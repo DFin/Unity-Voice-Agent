@@ -3,8 +3,15 @@
     "com.dfin.voiceagent": {
       "version": "file:com.dfin.voiceagent",
       "depth": 0,
-      "source": "local",
+      "source": "embedded",
       "dependencies": {}
+    },
+    "com.endel.nativewebsocket": {
+      "version": "https://github.com/endel/NativeWebSocket.git#upm",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "1d8b49b3fee41c09a98141f1f1a5e4db47e14229"
     },
     "com.unity.ai.navigation": {
       "version": "2.0.9",
@@ -96,6 +103,13 @@
     "com.unity.nuget.mono-cecil": {
       "version": "1.11.5",
       "depth": 3,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.nuget.newtonsoft-json": {
+      "version": "3.2.2",
+      "depth": 0,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"

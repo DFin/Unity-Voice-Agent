@@ -1,6 +1,8 @@
 {
   "dependencies": {
     "com.dfin.voiceagent": "file:com.dfin.voiceagent",
+    "com.endel.nativewebsocket": "https://github.com/endel/NativeWebSocket.git#upm",
+    "com.unity.nuget.newtonsoft-json": "3.2.2",
     "com.unity.ai.navigation": "2.0.9",
     "com.unity.collab-proxy": "2.10.0",
     "com.unity.ide.rider": "3.0.38",

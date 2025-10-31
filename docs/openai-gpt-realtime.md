@@ -5,6 +5,27 @@ This page shows the tiny subset we use in **Realtime Voice AI** to stream mic PC
 
 ---
 
+## Unity Dependencies
+
+- **NativeWebSocket** (https://github.com/endel/NativeWebSocket.git#upm) — required because `System.Net.WebSockets` is not available on IL2CPP targets (Android, iOS, Quest). Works across desktop and mobile.
+- **Newtonsoft JSON** (`com.unity.nuget.newtonsoft-json`) — used for parsing nested realtime payloads; maintained by Unity and IL2CPP safe.
+
+Add both via Package Manager before running the OpenAI pipeline.
+
+**Configuration Asset**
+
+- Create `VoiceAgentSettings` via `Voice Agent → Settings`. The asset is stored under `Assets/VoiceAgent/Resources/VoiceAgentSettings.asset` so runtime scripts can load it with `VoiceAgentSettings.Load()`.
+- API keys remain in plain text—rotate frequently and avoid checking production secrets into version control.
+
+**Runtime Scaffolding (Phase 1)**
+
+- `OpenAiRealtimeController` MonoBehaviour loads settings, builds `OpenAiRealtimeClient`, and will drive the realtime loop once transport/audio pipelines are complete.
+- `MicrophoneCapture` publishes raw float sample buffers (16 kHz by default) to feed into the realtime API.
+- `StreamingAudioPlayer` queues Unity `AudioClip` instances as a temporary stand-in for streamed playback until PCM decoding is wired up.
+- `NullRealtimeTransport` is a stub used until the NativeWebSocket transport is implemented.
+
+---
+
 ## 1) Connect
 
 **WebSocket URL**
