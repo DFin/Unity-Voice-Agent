@@ -32,6 +32,12 @@ namespace DFIN.VoiceAgent.Networking
 
             cancellationToken.ThrowIfCancellationRequested();
 
+            Dictionary<string, string> headerCopy = null;
+            if (headers != null && headers.Count > 0)
+            {
+                headerCopy = new Dictionary<string, string>(headers);
+            }
+
             lock (sync)
             {
                 if (webSocket != null)
@@ -39,15 +45,12 @@ namespace DFIN.VoiceAgent.Networking
                     throw new InvalidOperationException("WebSocket is already connected or connecting.");
                 }
 
-                webSocket = new WebSocket(uri.ToString());
+                webSocket = headerCopy != null
+                    ? new WebSocket(uri.ToString(), headerCopy)
+                    : new WebSocket(uri.ToString());
             }
 
-            if (headers != null && headers.Count > 0)
-            {
-                webSocket.SetHeaders(new Dictionary<string, string>(headers));
-            }
-
-            RegisterCallbacks();
+            RegisterCallbacks(webSocket);
 
             using var registration = cancellationToken.Register(CancelConnect);
 
@@ -139,25 +142,25 @@ namespace DFIN.VoiceAgent.Networking
             return socket;
         }
 
-        private void RegisterCallbacks()
+        private void RegisterCallbacks(WebSocket socket)
         {
-            webSocket.OnOpen += HandleOpen;
-            webSocket.OnMessage += HandleMessage;
-            webSocket.OnError += HandleError;
-            webSocket.OnClose += HandleClose;
+            socket.OnOpen += HandleOpen;
+            socket.OnMessage += HandleMessage;
+            socket.OnError += HandleError;
+            socket.OnClose += HandleClose;
         }
 
-        private void UnregisterCallbacks()
+        private void UnregisterCallbacks(WebSocket socket)
         {
-            if (webSocket == null)
+            if (socket == null)
             {
                 return;
             }
 
-            webSocket.OnOpen -= HandleOpen;
-            webSocket.OnMessage -= HandleMessage;
-            webSocket.OnError -= HandleError;
-            webSocket.OnClose -= HandleClose;
+            socket.OnOpen -= HandleOpen;
+            socket.OnMessage -= HandleMessage;
+            socket.OnError -= HandleError;
+            socket.OnClose -= HandleClose;
         }
 
         private void HandleOpen()
@@ -202,14 +205,20 @@ namespace DFIN.VoiceAgent.Networking
 
         private void DisposeWebSocket()
         {
-            if (webSocket == null)
+            WebSocket socket;
+            lock (sync)
+            {
+                socket = webSocket;
+                webSocket = null;
+            }
+
+            if (socket == null)
             {
                 return;
             }
 
-            UnregisterCallbacks();
-            webSocket.Dispose();
-            webSocket = null;
+            UnregisterCallbacks(socket);
+            socket.CancelConnection();
         }
     }
 }
