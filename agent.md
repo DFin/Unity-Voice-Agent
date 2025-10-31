@@ -13,6 +13,7 @@ Purpose: give human collaborators and coding agents a quick reference on how to 
 - Configuration assets should remain in `Assets/VoiceAgent/Resources/VoiceAgentSettings.asset`; always update the editor tooling if the schema changes and remind users that credentials are stored in plain text.
 - When editing the realtime pipeline, update `docs/openai-gpt-realtime.md` and describe any new request/response flow, especially around microphone buffering or playback changes.
 - `OpenAiAudioStream` + `StreamingAudioPlayer` now produce audible output—if you change the sample rate or buffering logic, document it and keep defaults aligned with OpenAI settings (`outputSampleRate`).
+- The controller creates a fallback `AudioListener` for empty scenes; adjust documentation if that behavior changes.
 - Prefer incremental commits with clear messages; never rewrite user-made history.
 
 ## Coding Guidelines

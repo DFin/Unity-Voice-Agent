@@ -24,6 +24,12 @@ namespace DFIN.VoiceAgent.OpenAI
         [SerializeField]
         private bool connectOnStart = true;
 
+        [SerializeField]
+        private bool logAudioEvents;
+
+        [SerializeField]
+        private bool ensureAudioListener = true;
+
         private OpenAiRealtimeClient client;
         private IRealtimeTransport transport;
         private MicrophoneCapture microphoneCapture;
@@ -63,6 +69,18 @@ namespace DFIN.VoiceAgent.OpenAI
             microphoneCapture.SampleReady += HandleMicrophoneSamples;
             audioStream = new OpenAiAudioStream();
             audioStream.SegmentReady += HandleAudioSegmentReady;
+
+            if (ensureAudioListener && FindFirstObjectByType<AudioListener>() == null)
+            {
+                var listenerObject = new GameObject("VoiceAgentAudioListener");
+                listenerObject.AddComponent<AudioListener>();
+                listenerObject.hideFlags = HideFlags.HideAndDontSave;
+                DontDestroyOnLoad(listenerObject);
+                if (logAudioEvents)
+                {
+                    Debug.Log("[OpenAI Realtime] Created fallback AudioListener.", this);
+                }
+            }
         }
 
         private async void Start()
@@ -174,9 +192,17 @@ namespace DFIN.VoiceAgent.OpenAI
                         if (!string.IsNullOrEmpty(audio))
                         {
                             audioStream?.AppendDelta(audio);
+                            if (logAudioEvents)
+                            {
+                                Debug.Log($"[OpenAI Realtime] Appended audio delta ({audio.Length} chars)", this);
+                            }
                         }
                         break;
                     case "response.output_audio.done":
+                        if (logAudioEvents)
+                        {
+                            Debug.Log("[OpenAI Realtime] Audio segment done", this);
+                        }
                         audioStream?.MarkSegmentComplete();
                         break;
                 }
@@ -281,6 +307,11 @@ namespace DFIN.VoiceAgent.OpenAI
 
             var outputSampleRate = openAiSettings != null ? Mathf.Max(8000, openAiSettings.outputSampleRate) : 24000;
             audioPlayer?.EnqueuePcm16Samples(samples, outputSampleRate);
+
+            if (logAudioEvents)
+            {
+                Debug.Log($"[OpenAI Realtime] Queued audio segment ({samples.Length} samples @ {outputSampleRate} Hz)", this);
+            }
         }
 
         private void EnsureBuffers(int sampleCount)
@@ -308,19 +339,19 @@ namespace DFIN.VoiceAgent.OpenAI
 
         private static string ExtractAudioBase64(JObject json)
         {
-            var direct = json["delta"]?["audio"]?.ToString();
-            if (!string.IsNullOrEmpty(direct))
+            foreach (var token in json.SelectTokens("$..audio"))
             {
-                return direct;
+                if (token.Type == JTokenType.String)
+                {
+                    var value = token.ToString();
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        return value;
+                    }
+                }
             }
 
-            var nestedToken = json["response"]?
-                ["output_audio"]?
-                ["delta"]?
-                ["audio"];
-
-            var nested = nestedToken?.ToString();
-            return string.IsNullOrEmpty(nested) ? null : nested;
+            return null;
         }
 
         private static string MapVadEagerness(VadEagerness eagerness)

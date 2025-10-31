@@ -23,7 +23,7 @@ Add both via Package Manager before running the OpenAI pipeline.
 **Runtime Scaffolding (Phase 1)**
 
 - `NativeWebSocketTransport` wraps the NativeWebSocket package so we can connect on desktop, Android, iOS, Quest, and WebGL.
-- `OpenAiRealtimeController` MonoBehaviour loads settings, connects, sends a `session.update`, dispatches NativeWebSocket messages, forwards mic audio as `input_audio_buffer.append`, and handles response audio playback.
+- `OpenAiRealtimeController` MonoBehaviour loads settings, connects, sends a `session.update`, dispatches NativeWebSocket messages, forwards mic audio as `input_audio_buffer.append`, and handles response audio playback (it also spawns a fallback `AudioListener` when a scene lacks one).
 - `MicrophoneCapture` publishes raw float sample buffers (16 kHz by default) to feed into the realtime API.
 - `OpenAiAudioStream` collects `response.output_audio.delta` events, converts them to PCM16, and `StreamingAudioPlayer` feeds them through an `AudioSource` (spatial audio optional).
 - The mic bridge currently auto-streams; server-side VAD will trigger responses. Manual commit / response requests will be added alongside tooling UX.
