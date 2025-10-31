@@ -1,6 +1,6 @@
 # Unity Voice Agent Plugin
 
-Early-stage Unity package that wires OpenAI GPT Realtime (and later ElevenLabs) into a reusable voice-agent prefab for students. The goal is to ship a simple, open source starting point installable through the Unity Package Manager via Git.
+Early-stage Unity package that wires OpenAI GPT Realtime (and later ElevenLabs) into a reusable voice-agent prefab. Mostly intentended for prototyping (I am doing this for a university lecture to help students get startet). The goal is to ship a simple, open source starting point installable through the Unity Package Manager via Git.
 
 ## Current Status
 - ✅ Repository scaffolding and planning documents
