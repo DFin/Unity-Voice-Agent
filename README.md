@@ -23,8 +23,8 @@ https://github.com/RageAgainstThePixel/com.rest.elevenlabs
 3. Install supporting dependencies via the Unity Package Manager:
    - `com.unity.nuget.newtonsoft-json` (official Json.NET fork, IL2CPP compatible).
    - `https://github.com/endel/NativeWebSocket.git#upm` (WebSocket layer that works on desktop, Android, iOS, Quest).
-4. Open `Voice Agent → Settings` to create `Assets/VoiceAgent/Resources/VoiceAgentSettings.asset` and enter development API keys.
-5. Drop `OpenAiRealtimeController` + `MicrophoneCapture` on a GameObject and press Play to exercise the realtime loop (currently streams mic audio and logs responses; audio playback wiring is next).
+4. Open `Voice Agent → Settings` to create `Assets/VoiceAgent/Resources/VoiceAgentSettings.asset`, enter development API keys, and adjust options (model defaults to `gpt-realtime`, semantic VAD behavior, voice, output sample rate).
+5. Drop `OpenAiRealtimeController` on a GameObject (the required mic/audio components are added automatically) and press Play to speak with the realtime model—Unity will stream your mic input and play back the model's audio responses.
 6. Read `DEVELOPMENT.md` for coding standards and contribution workflow as they evolve.
 
 ## Installing via UPM (Once Releases Start)

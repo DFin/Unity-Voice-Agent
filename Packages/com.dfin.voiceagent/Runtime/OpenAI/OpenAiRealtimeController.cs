@@ -14,6 +14,7 @@ namespace DFIN.VoiceAgent.OpenAI
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(MicrophoneCapture))]
+    [RequireComponent(typeof(StreamingAudioPlayer))]
     public class OpenAiRealtimeController : MonoBehaviour
     {
         [Header("Configuration")]
@@ -26,6 +27,8 @@ namespace DFIN.VoiceAgent.OpenAI
         private OpenAiRealtimeClient client;
         private IRealtimeTransport transport;
         private MicrophoneCapture microphoneCapture;
+        private StreamingAudioPlayer audioPlayer;
+        private OpenAiAudioStream audioStream;
 
         private CancellationTokenSource connectionCts;
         private OpenAiRealtimeSettings openAiSettings;
@@ -46,6 +49,7 @@ namespace DFIN.VoiceAgent.OpenAI
 
             openAiSettings = settingsAsset.OpenAi;
             microphoneCapture = GetComponent<MicrophoneCapture>();
+            audioPlayer = GetComponent<StreamingAudioPlayer>();
 
             transport ??= new NativeWebSocketTransport();
             client = new OpenAiRealtimeClient(openAiSettings, transport);
@@ -54,8 +58,11 @@ namespace DFIN.VoiceAgent.OpenAI
             client.Closed += HandleClosed;
             client.Error += HandleError;
             client.TextMessageReceived += HandleTextMessage;
+            client.BinaryMessageReceived += HandleBinaryMessage;
 
             microphoneCapture.SampleReady += HandleMicrophoneSamples;
+            audioStream = new OpenAiAudioStream();
+            audioStream.SegmentReady += HandleAudioSegmentReady;
         }
 
         private async void Start()
@@ -96,6 +103,7 @@ namespace DFIN.VoiceAgent.OpenAI
                 client.Closed -= HandleClosed;
                 client.Error -= HandleError;
                 client.TextMessageReceived -= HandleTextMessage;
+                client.BinaryMessageReceived -= HandleBinaryMessage;
                 client.Dispose();
                 client = null;
             }
@@ -103,6 +111,11 @@ namespace DFIN.VoiceAgent.OpenAI
             if (microphoneCapture != null)
             {
                 microphoneCapture.SampleReady -= HandleMicrophoneSamples;
+            }
+
+            if (audioStream != null)
+            {
+                audioStream.SegmentReady -= HandleAudioSegmentReady;
             }
 
             transport = null;
@@ -126,12 +139,14 @@ namespace DFIN.VoiceAgent.OpenAI
             Debug.Log("OpenAI realtime connected.");
             isConnected = true;
             SendSessionUpdate();
+            audioStream?.Reset();
         }
 
         private void HandleClosed()
         {
             Debug.Log("OpenAI realtime closed.");
             isConnected = false;
+            audioStream?.Reset();
         }
 
         private void HandleError(System.Exception exception)
@@ -151,11 +166,30 @@ namespace DFIN.VoiceAgent.OpenAI
                 var json = JObject.Parse(message);
                 var type = json["type"]?.ToString();
                 Debug.Log($"[OpenAI Realtime] {type ?? "event"}: {message}", this);
+
+                switch (type)
+                {
+                    case "response.output_audio.delta":
+                        var audio = ExtractAudioBase64(json);
+                        if (!string.IsNullOrEmpty(audio))
+                        {
+                            audioStream?.AppendDelta(audio);
+                        }
+                        break;
+                    case "response.output_audio.done":
+                        audioStream?.MarkSegmentComplete();
+                        break;
+                }
             }
             catch (Exception)
             {
                 Debug.Log($"[OpenAI Realtime] {message}", this);
             }
+        }
+
+        private void HandleBinaryMessage(byte[] payload)
+        {
+            // Currently unused; realtime API sends text events. Reserved for future binary streaming support.
         }
 
         private async void SendSessionUpdate()
@@ -168,27 +202,39 @@ namespace DFIN.VoiceAgent.OpenAI
             var session = new JObject
             {
                 ["type"] = "realtime",
-                ["modalities"] = new JArray("audio", "text"),
-                ["audio"] = new JObject
+                ["modalities"] = new JArray("audio", "text")
+            };
+
+            var audioObject = new JObject
+            {
+                ["output"] = new JObject
                 {
-                    ["output"] = new JObject
-                    {
-                        ["voice"] = openAiSettings.voice
-                    }
+                    ["voice"] = openAiSettings.voice
                 }
             };
+
+            if (openAiSettings.serverVadEnabled)
+            {
+                var vad = openAiSettings.semanticVad ?? new SemanticVadSettings();
+                var turnDetection = new JObject
+                {
+                    ["type"] = "semantic_vad",
+                    ["create_response"] = vad.createResponse,
+                    ["interrupt_response"] = vad.interruptResponse,
+                    ["eagerness"] = MapVadEagerness(vad.eagerness)
+                };
+
+                audioObject["input"] = new JObject
+                {
+                    ["turn_detection"] = turnDetection
+                };
+            }
+
+            session["audio"] = audioObject;
 
             if (!string.IsNullOrWhiteSpace(openAiSettings.systemInstructions))
             {
                 session["instructions"] = openAiSettings.systemInstructions;
-            }
-
-            if (openAiSettings.serverVadEnabled)
-            {
-                session["turn_detection"] = new JObject
-                {
-                    ["type"] = "server_vad"
-                };
             }
 
             var payload = new JObject
@@ -221,6 +267,22 @@ namespace DFIN.VoiceAgent.OpenAI
             _ = client.SendTextAsync(message.ToString(), CancellationToken.None);
         }
 
+        private void HandleAudioSegmentReady(short[] samples)
+        {
+            if (samples == null || samples.Length == 0)
+            {
+                return;
+            }
+
+            if (audioPlayer == null)
+            {
+                audioPlayer = GetComponent<StreamingAudioPlayer>();
+            }
+
+            var outputSampleRate = openAiSettings != null ? Mathf.Max(8000, openAiSettings.outputSampleRate) : 24000;
+            audioPlayer?.EnqueuePcm16Samples(samples, outputSampleRate);
+        }
+
         private void EnsureBuffers(int sampleCount)
         {
             if (pcmBuffer == null || pcmBuffer.Length != sampleCount)
@@ -241,6 +303,39 @@ namespace DFIN.VoiceAgent.OpenAI
             {
                 var clamped = Mathf.Clamp(source[i], -1f, 1f);
                 destination[i] = (short)Mathf.FloorToInt(clamped * short.MaxValue);
+            }
+        }
+
+        private static string ExtractAudioBase64(JObject json)
+        {
+            var direct = json["delta"]?["audio"]?.ToString();
+            if (!string.IsNullOrEmpty(direct))
+            {
+                return direct;
+            }
+
+            var nestedToken = json["response"]?
+                ["output_audio"]?
+                ["delta"]?
+                ["audio"];
+
+            var nested = nestedToken?.ToString();
+            return string.IsNullOrEmpty(nested) ? null : nested;
+        }
+
+        private static string MapVadEagerness(VadEagerness eagerness)
+        {
+            switch (eagerness)
+            {
+                case VadEagerness.Low:
+                    return "low";
+                case VadEagerness.Medium:
+                    return "medium";
+                case VadEagerness.High:
+                    return "high";
+                case VadEagerness.Auto:
+                default:
+                    return "auto";
             }
         }
     }

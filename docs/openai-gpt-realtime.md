@@ -16,13 +16,16 @@ Add both via Package Manager before running the OpenAI pipeline.
 
 - Create `VoiceAgentSettings` via `Voice Agent → Settings`. The asset is stored under `Assets/VoiceAgent/Resources/VoiceAgentSettings.asset` so runtime scripts can load it with `VoiceAgentSettings.Load()`.
 - API keys remain in plain text—rotate frequently and avoid checking production secrets into version control.
+- `OpenAiRealtimeSettings.modelId` defaults to `gpt-realtime`.
+- `OpenAiRealtimeSettings.outputSampleRate` controls how playback clips are created (defaults to 24 kHz to match OpenAI's voices).
+- Semantic VAD (server-side turn detection) is enabled by default. You can toggle automatic response creation, eagerness (`auto`, `low`, `medium`, `high`), and interruption behavior from the settings asset.
 
 **Runtime Scaffolding (Phase 1)**
 
 - `NativeWebSocketTransport` wraps the NativeWebSocket package so we can connect on desktop, Android, iOS, Quest, and WebGL.
-- `OpenAiRealtimeController` MonoBehaviour loads settings, connects, sends a `session.update`, dispatches NativeWebSocket messages, and forwards mic audio as `input_audio_buffer.append`.
+- `OpenAiRealtimeController` MonoBehaviour loads settings, connects, sends a `session.update`, dispatches NativeWebSocket messages, forwards mic audio as `input_audio_buffer.append`, and handles response audio playback.
 - `MicrophoneCapture` publishes raw float sample buffers (16 kHz by default) to feed into the realtime API.
-- `StreamingAudioPlayer` queues Unity `AudioClip` instances as a temporary stand-in for streamed playback until PCM decoding is wired up.
+- `OpenAiAudioStream` collects `response.output_audio.delta` events, converts them to PCM16, and `StreamingAudioPlayer` feeds them through an `AudioSource` (spatial audio optional).
 - The mic bridge currently auto-streams; server-side VAD will trigger responses. Manual commit / response requests will be added alongside tooling UX.
 
 ---

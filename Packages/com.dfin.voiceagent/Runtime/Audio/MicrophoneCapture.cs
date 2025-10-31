@@ -31,6 +31,8 @@ namespace DFIN.VoiceAgent.Audio
         private float[] wrapHeadBuffer;
         private float[] wrapTailBuffer;
 
+        public int SampleRate => sampleRate;
+
         private void Awake()
         {
             RecalculateSampleBuffer();

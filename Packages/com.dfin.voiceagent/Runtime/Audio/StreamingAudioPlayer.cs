@@ -1,10 +1,11 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace DFIN.VoiceAgent.Audio
 {
     /// <summary>
-    /// Placeholder for a streaming audio player that will eventually feed model PCM output into an AudioSource.
+    /// Takes PCM audio and plays it through an AudioSource in sequence.
     /// </summary>
     [RequireComponent(typeof(AudioSource))]
     public class StreamingAudioPlayer : MonoBehaviour
@@ -12,12 +13,25 @@ namespace DFIN.VoiceAgent.Audio
         [SerializeField]
         private AudioSource audioSource;
 
+        [SerializeField]
+        private bool spatialize;
+
+        [SerializeField]
+        private float playbackVolume = 1f;
+
         private readonly Queue<AudioClip> pendingClips = new();
 
         private void Awake()
         {
             audioSource ??= GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+            }
             audioSource.playOnAwake = false;
+            audioSource.spatialize = spatialize;
+            audioSource.spatialBlend = spatialize ? 1f : 0f;
+            audioSource.volume = playbackVolume;
         }
 
         private void Update()
@@ -30,9 +44,6 @@ namespace DFIN.VoiceAgent.Audio
             }
         }
 
-        /// <summary>
-        /// Enqueue a clip to play. Used as a temporary stand-in for the future PCM streaming pipeline.
-        /// </summary>
         public void EnqueueClip(AudioClip clip)
         {
             if (clip == null)
@@ -41,6 +52,24 @@ namespace DFIN.VoiceAgent.Audio
             }
 
             pendingClips.Enqueue(clip);
+        }
+
+        public void EnqueuePcm16Samples(short[] samples, int sampleRate)
+        {
+            if (samples == null || samples.Length == 0)
+            {
+                return;
+            }
+
+            var clip = AudioClip.Create("OpenAI Response", samples.Length, 1, sampleRate, false);
+            var floatBuffer = new float[samples.Length];
+            for (var i = 0; i < samples.Length; i++)
+            {
+                floatBuffer[i] = samples[i] / (float)short.MaxValue;
+            }
+
+            clip.SetData(floatBuffer, 0);
+            EnqueueClip(clip);
         }
 
         /// <summary>

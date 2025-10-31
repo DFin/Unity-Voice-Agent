@@ -9,8 +9,8 @@ This document will outline the contributor workflow as the project grows. Initia
 - Configuration assets live in `Assets/VoiceAgent/Resources/VoiceAgentSettings.asset`. Use `Voice Agent → Settings` to create/update it; remember the API keys are stored in plain text for dev only.
 - Runtime loop pieces:
   - `NativeWebSocketTransport` implements the cross-platform WebSocket layer.
-  - `OpenAiRealtimeController` loads config, connects, sends `session.update`, streams microphone audio, and logs events.
+  - `OpenAiRealtimeController` loads config, connects, sends `session.update`, streams microphone audio, logs events, and drives playback.
   - `MicrophoneCapture` emits float buffers (16 kHz) consumed by the realtime controller.
-  - `StreamingAudioPlayer` is currently a stub; replace it when the PCM playback pipeline is ready.
+  - `OpenAiAudioStream` accumulates `response.output_audio.delta` events and `StreamingAudioPlayer` plays the decoded PCM (spatial audio optional).
 
 Additional guidelines (style rules, testing strategy, PR template) will be added once core systems land.

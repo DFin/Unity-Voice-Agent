@@ -41,7 +41,7 @@ namespace DFIN.VoiceAgent.Configuration
         public string apiKey = string.Empty;
 
         [Tooltip("Realtime-capable model identifier.")]
-        public string modelId = "gpt-4o-realtime-preview";
+        public string modelId = "gpt-realtime";
 
         [Tooltip("Base WebSocket URL used for realtime sessions.")]
         public string endpointUrl = "wss://api.openai.com/v1/realtime";
@@ -55,6 +55,12 @@ namespace DFIN.VoiceAgent.Configuration
 
         [Tooltip("Enable server-side voice activity detection.")]
         public bool serverVadEnabled = true;
+
+        [Tooltip("Settings for semantic voice activity detection when enabled.")]
+        public SemanticVadSettings semanticVad = new();
+
+        [Tooltip("Expected sample rate of audio returned by the realtime API (Hz).")]
+        public int outputSampleRate = 24000;
     }
 
     [Serializable]
@@ -66,5 +72,25 @@ namespace DFIN.VoiceAgent.Configuration
         [Tooltip("Default voice id to request for ElevenLabs playback.")]
         public string voiceId = string.Empty;
     }
-}
 
+    [Serializable]
+    public class SemanticVadSettings
+    {
+        [Tooltip("Automatically create a response when speech stops.")]
+        public bool createResponse = true;
+
+        [Tooltip("How quickly the assistant should respond once speech stops.")]
+        public VadEagerness eagerness = VadEagerness.Auto;
+
+        [Tooltip("Interrupt the current assistant response when new speech starts.")]
+        public bool interruptResponse = true;
+    }
+
+    public enum VadEagerness
+    {
+        Auto,
+        Low,
+        Medium,
+        High
+    }
+}
