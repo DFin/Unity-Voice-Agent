@@ -49,11 +49,8 @@ namespace DFIN.VoiceAgent.Configuration
         [Tooltip("Requested output voice id (OpenAI voice library).")]
         public string voice = "alloy";
 
-        [Tooltip("Enable server-side voice activity detection.")]
-        public bool serverVadEnabled = true;
-
-        [Tooltip("Settings for semantic voice activity detection when enabled.")]
-        public SemanticVadSettings semanticVad = new();
+        [Tooltip("Configure how the realtime session detects user turns.")]
+        public TurnDetectionSettings turnDetection = new();
 
         [Tooltip("Expected sample rate of audio returned by the realtime API (Hz).")]
         public int outputSampleRate = 24000;
@@ -70,16 +67,59 @@ namespace DFIN.VoiceAgent.Configuration
     }
 
     [Serializable]
+    public class TurnDetectionSettings
+    {
+        [Tooltip("None disables automatic turn detection; Server VAD uses amplitude; Semantic VAD uses model-based intent.")]
+        public TurnDetectionMode mode = TurnDetectionMode.SemanticVad;
+
+        [Tooltip("Configuration applied when mode is Server VAD.")]
+        public ServerVadSettings server = new();
+
+        [Tooltip("Configuration applied when mode is Semantic VAD.")]
+        public SemanticVadSettings semantic = new();
+    }
+
+    [Serializable]
+    public class ServerVadSettings
+    {
+        [Tooltip("Automatically create a response when speech stops.")]
+        public bool createResponse = true;
+
+        [Tooltip("Interrupt the current assistant response when new speech starts.")]
+        public bool interruptResponse = true;
+
+        [Tooltip("Activation threshold (0-1). Higher requires louder input.")]
+        [Range(0f, 1f)]
+        public float threshold = 0.5f;
+
+        [Tooltip("Amount of audio (ms) to prepend before detected speech.")]
+        public int prefixPaddingMs = 300;
+
+        [Tooltip("Silence duration (ms) required to detect speech end.")]
+        public int silenceDurationMs = 500;
+
+        [Tooltip("Optional idle timeout (ms) before forcing a response. Set to 0 to disable.")]
+        public int idleTimeoutMs = 0;
+    }
+
+    [Serializable]
     public class SemanticVadSettings
     {
         [Tooltip("Automatically create a response when speech stops.")]
         public bool createResponse = true;
 
         [Tooltip("How quickly the assistant should respond once speech stops.")]
-        public VadEagerness eagerness = VadEagerness.Auto;
+        public VadEagerness eagerness = VadEagerness.Low;
 
         [Tooltip("Interrupt the current assistant response when new speech starts.")]
         public bool interruptResponse = true;
+    }
+
+    public enum TurnDetectionMode
+    {
+        None,
+        ServerVad,
+        SemanticVad
     }
 
     public enum VadEagerness

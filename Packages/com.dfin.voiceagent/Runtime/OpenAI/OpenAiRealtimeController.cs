@@ -320,18 +320,7 @@ namespace DFIN.VoiceAgent.OpenAI
                 session["instructions"] = instructions;
             }
 
-            if (openAiSettings.serverVadEnabled)
-            {
-                var vad = openAiSettings.semanticVad ?? new SemanticVadSettings();
-                var turnDetection = new JObject
-                {
-                    ["type"] = "server_vad",
-                    ["create_response"] = vad.createResponse,
-                    ["interrupt_response"] = vad.interruptResponse
-                };
-
-                session["turn_detection"] = turnDetection;
-            }
+            ApplyTurnDetection(session);
 
             var payload = new JObject
             {
@@ -368,6 +357,60 @@ namespace DFIN.VoiceAgent.OpenAI
             };
 
             _ = client.SendTextAsync(message.ToString(), CancellationToken.None);
+        }
+
+        private void ApplyTurnDetection(JObject session)
+        {
+            if (session == null || openAiSettings == null)
+            {
+                return;
+            }
+
+            var turnSettings = openAiSettings.turnDetection ?? new TurnDetectionSettings();
+            switch (turnSettings.mode)
+            {
+                case TurnDetectionMode.None:
+                    session["turn_detection"] = JValue.CreateNull();
+                    break;
+
+                case TurnDetectionMode.ServerVad:
+                {
+                    var server = turnSettings.server ?? new ServerVadSettings();
+                    var turnDetection = new JObject
+                    {
+                        ["type"] = "server_vad",
+                        ["create_response"] = server.createResponse,
+                        ["interrupt_response"] = server.interruptResponse,
+                        ["threshold"] = server.threshold,
+                        ["prefix_padding_ms"] = server.prefixPaddingMs,
+                        ["silence_duration_ms"] = server.silenceDurationMs
+                    };
+
+                    if (server.idleTimeoutMs > 0)
+                    {
+                        turnDetection["idle_timeout_ms"] = server.idleTimeoutMs;
+                    }
+
+                    session["turn_detection"] = turnDetection;
+                    break;
+                }
+
+                case TurnDetectionMode.SemanticVad:
+                default:
+                {
+                    var semantic = turnSettings.semantic ?? new SemanticVadSettings();
+                    var turnDetection = new JObject
+                    {
+                        ["type"] = "semantic_vad",
+                        ["create_response"] = semantic.createResponse,
+                        ["interrupt_response"] = semantic.interruptResponse,
+                        ["eagerness"] = MapSemanticEagerness(semantic.eagerness)
+                    };
+
+                    session["turn_detection"] = turnDetection;
+                    break;
+                }
+            }
         }
 
         private void HandleAudioSamplesAvailable(short[] samples)
@@ -434,6 +477,22 @@ namespace DFIN.VoiceAgent.OpenAI
             }
 
             return null;
+        }
+
+        private static string MapSemanticEagerness(VadEagerness eagerness)
+        {
+            switch (eagerness)
+            {
+                case VadEagerness.Low:
+                    return "low";
+                case VadEagerness.Medium:
+                    return "medium";
+                case VadEagerness.High:
+                    return "high";
+                case VadEagerness.Auto:
+                default:
+                    return "auto";
+            }
         }
 
         private void RegisterActiveResponse(string responseId)

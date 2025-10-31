@@ -18,7 +18,7 @@ Add both via Package Manager before running the OpenAI pipeline.
 - API keys remain in plain text—rotate frequently and avoid checking production secrets into version control.
 - `OpenAiRealtimeSettings.modelId` defaults to `gpt-realtime`.
 - `OpenAiRealtimeSettings.outputSampleRate` controls how playback clips are created (defaults to 24 kHz to match OpenAI's voices).
-- Semantic VAD (server-side turn detection) is enabled by default. You can toggle automatic response creation, eagerness (`auto`, `low`, `medium`, `high`), and interruption behavior from the settings asset.
+- Turn detection defaults to **Semantic VAD** with eagerness `low`. The settings asset lets you switch between `None`, `Server VAD`, or `Semantic VAD` and tune the corresponding parameters.
 
 **Runtime Scaffolding (Phase 1)**
 
@@ -53,7 +53,7 @@ Send a `session.update` client event to set basics:
       "session": {
         "type": "realtime",
         "modalities": ["audio","text"],
-        "turn_detection": { "type": "server_vad" },
+        "turn_detection": { "type": "semantic_vad", "eagerness": "low" },
         "audio": {
           "output": { "voice": "alloy" }
         },
@@ -62,7 +62,7 @@ Send a `session.update` client event to set basics:
     }
 
 Notes:
-- **Server VAD** lets the API detect speech start/stop.
+- Pick `semantic_vad` for the intent-aware detector, `server_vad` for classic amplitude VAD, or `null` to disable automatic turn handling entirely.
 - Most session fields can be updated at runtime; **voice** should be set before the first audio response.
 
 ---
