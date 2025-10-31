@@ -10,6 +10,7 @@
 - [ ] Convert project folder into a Unity package layout (`Packages/com.student.voiceagent`) while keeping sample project assets for rapid testing.
 - [ ] Establish assembly definitions for runtime, editor, and sample code to keep dependencies clean.
 - [ ] Set up baseline documentation skeleton (`README.md`, `DEVELOPMENT.md`, `plan.md`) and licensing.
+- [ ] Keep API-specific references under `docs/` (e.g., OpenAI GPT Realtime, ElevenLabs) synced with implementation changes and contributor notes (`agent.md`).
 - [ ] Configure package metadata (display name, description, versioning strategy, UPM-compatible structure).
 
 ## Phase 1 – Core Realtime Voice Loop (OpenAI First Priority)
@@ -47,4 +48,3 @@
 - Decide if we support Windows/macOS/Linux equally in MVP or note platform caveats.
 - Clarify long-term plans for local model compatibility or keep scope cloud-only.
 - Determine contribution workflow (PR guidelines, issue templates) for the open-source repo when ready.
-
