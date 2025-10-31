@@ -23,9 +23,9 @@ Add both via Package Manager before running the OpenAI pipeline.
 **Runtime Scaffolding (Phase 1)**
 
 - `NativeWebSocketTransport` wraps the NativeWebSocket package so we can connect on desktop, Android, iOS, Quest, and WebGL.
-- `OpenAiRealtimeController` MonoBehaviour loads settings, connects, sends a `session.update`, dispatches NativeWebSocket messages, forwards mic audio as `input_audio_buffer.append`, and handles response audio playback (it also spawns a fallback `AudioListener` when a scene lacks one).
+- `OpenAiRealtimeController` MonoBehaviour loads settings, connects, sends a `session.update`, dispatches NativeWebSocket messages, forwards mic audio as `input_audio_buffer.append`, and handles response audio playback (it also spawns a fallback `AudioListener` when a scene lacks one). It tracks in-flight `response_id`s so it can cancel/clear audio buffers when the user starts speaking again.
 - `MicrophoneCapture` publishes raw float sample buffers (16 kHz by default) to feed into the realtime API.
-- `OpenAiAudioStream` collects `response.output_audio.delta` events, converts them to PCM16, and `StreamingAudioPlayer` feeds them through an `AudioSource` (spatial audio optional).
+- `OpenAiAudioStream` forwards every `response.output_audio.delta` / `response.audio.delta` payload as PCM16 samples, and `StreamingAudioPlayer` pushes them into a streaming AudioClip so playback begins immediately. Basic linear resampling covers 24 kHz → Unity output rates. Cancels clear both the remote output buffer and the local queue.
 - The mic bridge currently auto-streams; server-side VAD will trigger responses. Manual commit / response requests will be added alongside tooling UX.
 
 ---
@@ -81,9 +81,7 @@ With server VAD enabled, the API commits when it detects end‑of‑speech; you 
 
 ## 4) Receive model audio
 
-Expect **`response.output_audio.delta`** events carrying base64 PCM audio, and a matching `...done` when the segment finishes.
-
-Write each delta to a ring buffer; resample to Unity’s output rate for playback.
+Expect **`response.output_audio.delta`** (older) or **`response.audio.delta`** (newer) events carrying base64 PCM audio, with matching `…done` events. Decode each delta immediately and enqueue it into the streaming buffer; don’t wait for the `done` before playing back.
 
 Optionally, read transcript deltas (`output_audio_transcript.delta`) to show live captions.
 
@@ -136,7 +134,7 @@ The model will emit tool‑call events on responses; your app runs the function 
 
 - `session.created` / `session.updated`
 - `input_audio_buffer.speech_started` / `speech_stopped` (when using server VAD)
-- `response.output_audio.delta` / `response.output_audio.done`
+- `response.output_audio.delta` / `response.audio.delta` and their corresponding `…done`
 - Tool‑call events on `response.*` (names may evolve; switch on the `type` string and read payload)
 
 ---
@@ -146,3 +144,4 @@ The model will emit tool‑call events on responses; your app runs the function 
 - 4xx during connect → verify **Authorization** header and model id.
 - No audio received → ensure `modalities` include `"audio"` and a **voice** is set before first audio output.
 - VAD too eager/slow → tweak `turn_detection` thresholds in `session.update`.
+- User speech overlaps assistant audio → the controller now issues `response.cancel`, `output_audio_buffer.clear`, and `input_audio_buffer.clear` when mic RMS spikes; tune the threshold or call `CancelActiveResponses()` manually if needed.

@@ -24,7 +24,7 @@ https://github.com/RageAgainstThePixel/com.rest.elevenlabs
    - `com.unity.nuget.newtonsoft-json` (official Json.NET fork, IL2CPP compatible).
    - `https://github.com/endel/NativeWebSocket.git#upm` (WebSocket layer that works on desktop, Android, iOS, Quest).
 4. Open `Voice Agent → Settings` to create `Assets/VoiceAgent/Resources/VoiceAgentSettings.asset`, enter development API keys, and adjust options (model defaults to `gpt-realtime`, semantic VAD behavior, voice, output sample rate).
-5. Drop `OpenAiRealtimeController` on a GameObject (the required mic/audio components are added automatically). On play, the controller will create a fallback `AudioListener` if your scene does not already have one, then stream mic input and play back the model's audio responses.
+5. Drop `OpenAiRealtimeController` on a GameObject (the required mic/audio components are added automatically). On play, the controller will create a fallback `AudioListener` if your scene does not already have one, then stream mic input and play back the model's audio responses in real time (current speech cancels any in-flight assistant audio).
 6. Read `DEVELOPMENT.md` for coding standards and contribution workflow as they evolve.
 
 ## Installing via UPM (Once Releases Start)

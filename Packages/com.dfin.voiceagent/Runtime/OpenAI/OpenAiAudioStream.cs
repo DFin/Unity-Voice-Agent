@@ -8,13 +8,12 @@ namespace DFIN.VoiceAgent.OpenAI
     /// </summary>
     public class OpenAiAudioStream
     {
-        private readonly List<byte> currentSegment = new();
-
-        public event Action<short[]> SegmentReady;
+        public event Action<short[]> SamplesAvailable;
+        public event Action SegmentCompleted;
 
         public void Reset()
         {
-            currentSegment.Clear();
+            // no buffered state is kept between segments
         }
 
         public void AppendDelta(string base64Payload)
@@ -27,7 +26,15 @@ namespace DFIN.VoiceAgent.OpenAI
             try
             {
                 var bytes = Convert.FromBase64String(base64Payload);
-                currentSegment.AddRange(bytes);
+                var sampleCount = bytes.Length / sizeof(short);
+                if (sampleCount <= 0)
+                {
+                    return;
+                }
+
+                var samples = new short[sampleCount];
+                Buffer.BlockCopy(bytes, 0, samples, 0, bytes.Length);
+                SamplesAvailable?.Invoke(samples);
             }
             catch (FormatException)
             {
@@ -37,19 +44,7 @@ namespace DFIN.VoiceAgent.OpenAI
 
         public void MarkSegmentComplete()
         {
-            if (currentSegment.Count == 0)
-            {
-                return;
-            }
-
-            var data = currentSegment.ToArray();
-            var sampleCount = data.Length / sizeof(short);
-            var samples = new short[sampleCount];
-            Buffer.BlockCopy(data, 0, samples, 0, data.Length);
-
-            SegmentReady?.Invoke(samples);
-
-            currentSegment.Clear();
+            SegmentCompleted?.Invoke();
         }
     }
 }

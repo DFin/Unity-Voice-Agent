@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using DFIN.VoiceAgent.Configuration;
@@ -35,6 +37,7 @@ namespace DFIN.VoiceAgent.OpenAI
         private MicrophoneCapture microphoneCapture;
         private StreamingAudioPlayer audioPlayer;
         private OpenAiAudioStream audioStream;
+        private readonly HashSet<string> activeResponses = new();
 
         private CancellationTokenSource connectionCts;
         private OpenAiRealtimeSettings openAiSettings;
@@ -42,6 +45,8 @@ namespace DFIN.VoiceAgent.OpenAI
         private bool isConnected;
         private short[] pcmBuffer;
         private byte[] byteBuffer;
+        private float lastCancelTimestamp = float.NegativeInfinity;
+        private const float CancelCooldownSeconds = 0.75f;
 
         private void Awake()
         {
@@ -68,7 +73,8 @@ namespace DFIN.VoiceAgent.OpenAI
 
             microphoneCapture.SampleReady += HandleMicrophoneSamples;
             audioStream = new OpenAiAudioStream();
-            audioStream.SegmentReady += HandleAudioSegmentReady;
+            audioStream.SamplesAvailable += HandleAudioSamplesAvailable;
+            audioStream.SegmentCompleted += HandleAudioSegmentCompleted;
 
             if (ensureAudioListener && FindFirstObjectByType<AudioListener>() == null)
             {
@@ -133,7 +139,8 @@ namespace DFIN.VoiceAgent.OpenAI
 
             if (audioStream != null)
             {
-                audioStream.SegmentReady -= HandleAudioSegmentReady;
+                audioStream.SamplesAvailable -= HandleAudioSamplesAvailable;
+                audioStream.SegmentCompleted -= HandleAudioSegmentCompleted;
             }
 
             transport = null;
@@ -156,6 +163,7 @@ namespace DFIN.VoiceAgent.OpenAI
         {
             Debug.Log("OpenAI realtime connected.");
             isConnected = true;
+            activeResponses.Clear();
             SendSessionUpdate();
             audioStream?.Reset();
         }
@@ -164,6 +172,7 @@ namespace DFIN.VoiceAgent.OpenAI
         {
             Debug.Log("OpenAI realtime closed.");
             isConnected = false;
+            activeResponses.Clear();
             audioStream?.Reset();
         }
 
@@ -183,6 +192,7 @@ namespace DFIN.VoiceAgent.OpenAI
             {
                 var json = JObject.Parse(message);
                 var type = json["type"]?.ToString();
+                var responseId = json["response_id"]?.ToString() ?? json["response"]?["id"]?.ToString();
                 Debug.Log($"[OpenAI Realtime] {type ?? "event"}: {message}", this);
 
                 switch (type)
@@ -198,6 +208,7 @@ namespace DFIN.VoiceAgent.OpenAI
                                 Debug.Log($"[OpenAI Realtime] Appended audio delta ({audio.Length} chars)", this);
                             }
                         }
+                        RegisterActiveResponse(responseId);
                         break;
                     }
                     case "response.audio.delta":
@@ -211,6 +222,7 @@ namespace DFIN.VoiceAgent.OpenAI
                                 Debug.Log($"[OpenAI Realtime] Appended audio delta ({audio.Length} chars)", this);
                             }
                         }
+                        RegisterActiveResponse(responseId);
                         break;
                     }
                     case "response.output_audio.done":
@@ -220,6 +232,19 @@ namespace DFIN.VoiceAgent.OpenAI
                             Debug.Log("[OpenAI Realtime] Audio segment done", this);
                         }
                         audioStream?.MarkSegmentComplete();
+                        if (!string.IsNullOrEmpty(responseId))
+                        {
+                            activeResponses.Remove(responseId);
+                        }
+                        break;
+                    case "response.created":
+                        RegisterActiveResponse(json["response"]?["id"]?.ToString());
+                        break;
+                    case "response.done":
+                        if (!string.IsNullOrEmpty(responseId))
+                        {
+                            activeResponses.Remove(responseId);
+                        }
                         break;
                 }
             }
@@ -306,9 +331,14 @@ namespace DFIN.VoiceAgent.OpenAI
             };
 
             _ = client.SendTextAsync(message.ToString(), CancellationToken.None);
+
+            if (ShouldRequestCancel(samples))
+            {
+                CancelActiveResponses();
+            }
         }
 
-        private void HandleAudioSegmentReady(short[] samples)
+        private void HandleAudioSamplesAvailable(short[] samples)
         {
             if (samples == null || samples.Length == 0)
             {
@@ -327,6 +357,11 @@ namespace DFIN.VoiceAgent.OpenAI
             {
                 Debug.Log($"[OpenAI Realtime] Queued audio segment ({samples.Length} samples @ {outputSampleRate} Hz)", this);
             }
+        }
+
+        private void HandleAudioSegmentCompleted()
+        {
+            // currently no-op, placeholder for future callbacks
         }
 
         private void EnsureBuffers(int sampleCount)
@@ -383,6 +418,82 @@ namespace DFIN.VoiceAgent.OpenAI
                 default:
                     return "auto";
             }
+        }
+
+        private void RegisterActiveResponse(string responseId)
+        {
+            if (!string.IsNullOrEmpty(responseId))
+            {
+                activeResponses.Add(responseId);
+            }
+        }
+
+        private bool ShouldRequestCancel(float[] samples)
+        {
+            if (samples == null || samples.Length == 0)
+            {
+                return false;
+            }
+
+            if (activeResponses.Count == 0)
+            {
+                return false;
+            }
+
+            if (Time.realtimeSinceStartup - lastCancelTimestamp < CancelCooldownSeconds)
+            {
+                return false;
+            }
+
+            double sum = 0;
+            for (var i = 0; i < samples.Length; i++)
+            {
+                sum += samples[i] * samples[i];
+            }
+
+            var rms = Math.Sqrt(sum / samples.Length);
+            return rms > 0.008;
+        }
+
+        private void CancelActiveResponses()
+        {
+            if (client == null)
+            {
+                return;
+            }
+
+            var ids = activeResponses.Count > 0 ? activeResponses.ToArray() : Array.Empty<string>();
+            if (ids.Length == 0)
+            {
+                SendEvent(new JObject { ["type"] = "response.cancel" });
+            }
+            else
+            {
+                foreach (var id in ids)
+                {
+                    SendEvent(new JObject
+                    {
+                        ["type"] = "response.cancel",
+                        ["response_id"] = id
+                    });
+                }
+            }
+
+            SendEvent(new JObject { ["type"] = "output_audio_buffer.clear" });
+            SendEvent(new JObject { ["type"] = "input_audio_buffer.clear" });
+            audioPlayer?.Clear();
+            activeResponses.Clear();
+            lastCancelTimestamp = Time.realtimeSinceStartup;
+        }
+
+        private void SendEvent(JObject payload)
+        {
+            if (payload == null || client == null)
+            {
+                return;
+            }
+
+            _ = client.SendTextAsync(payload.ToString(), CancellationToken.None);
         }
     }
 }
