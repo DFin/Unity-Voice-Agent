@@ -15,7 +15,8 @@ https://github.com/RageAgainstThePixel/com.rest.elevenlabs
 
 ## Current Status
 - ✅ Repository scaffolding and planning documents
-- 🔄 Implementing initial OpenAI streaming voice loop (see `plan.md` for roadmap)
+- ✅ Realtime OpenAI voice loop with large streaming buffer & server-driven interruption handling
+- 🔄 Expanding debugging tooling and ElevenLabs support (see `plan.md` for roadmap)
 
 ## Getting Started (Development)
 1. Clone this repository and open the root Unity project (tested with `6000.2.9f1`).
@@ -25,6 +26,7 @@ https://github.com/RageAgainstThePixel/com.rest.elevenlabs
    - `https://github.com/endel/NativeWebSocket.git#upm` (WebSocket layer that works on desktop, Android, iOS, Quest).
 4. Open `Voice Agent → Settings` to create `Assets/VoiceAgent/Resources/VoiceAgentSettings.asset`, enter development API keys, and adjust options (model defaults to `gpt-realtime`, semantic VAD behavior, voice, output sample rate).
 5. Drop `OpenAiRealtimeController` on a GameObject (the required mic/audio components are added automatically). On play, the controller will create a fallback `AudioListener` if your scene does not already have one, then stream mic input and play back the model's audio responses in real time. If you need to stop playback, call `CancelActiveResponses()` manually.
+   - The built-in streaming queue holds roughly 30 minutes of PCM audio by default; adjust `StreamingAudioPlayer.MaxBufferedSeconds` if you want a different memory/latency trade-off.
 6. Read `DEVELOPMENT.md` for coding standards and contribution workflow as they evolve.
 
 ## Installing via UPM (Once Releases Start)

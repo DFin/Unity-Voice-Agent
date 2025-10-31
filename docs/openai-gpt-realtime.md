@@ -25,7 +25,7 @@ Add both via Package Manager before running the OpenAI pipeline.
 - `NativeWebSocketTransport` wraps the NativeWebSocket package so we can connect on desktop, Android, iOS, Quest, and WebGL.
 - `OpenAiRealtimeController` MonoBehaviour loads settings, connects, sends a `session.update`, dispatches NativeWebSocket messages, forwards mic audio as `input_audio_buffer.append`, and handles response audio playback (it also spawns a fallback `AudioListener` when a scene lacks one). It tracks in-flight `response_id`s so it can cancel/clear audio buffers when the user starts speaking again.
 - `MicrophoneCapture` publishes raw float sample buffers (16 kHz by default) to feed into the realtime API.
-- `OpenAiAudioStream` forwards every `response.output_audio.delta` / `response.audio.delta` payload as PCM16 samples, and `StreamingAudioPlayer` pushes them into a streaming AudioClip so playback begins immediately. Basic linear resampling covers 24 kHz → Unity output rates. You can call `OpenAiRealtimeController.CancelActiveResponses()` to forward `response.cancel` and buffer-clear messages when needed.
+- `OpenAiAudioStream` forwards every `response.output_audio.delta` / `response.audio.delta` payload as PCM16 samples, and `StreamingAudioPlayer` pushes them into a streaming AudioClip so playback begins immediately. Basic linear resampling covers 24 kHz → Unity output rates, and the queue currently buffers ~30 minutes of audio before trimming. You can call `OpenAiRealtimeController.CancelActiveResponses()` to forward `response.cancel` and buffer-clear messages when needed.
 - The mic bridge currently auto-streams; server-side VAD will trigger responses. Manual commit / response requests will be added alongside tooling UX.
 
 ---
