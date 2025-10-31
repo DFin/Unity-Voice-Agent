@@ -578,8 +578,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: DFIN.VoiceAgent::DFIN.VoiceAgent.OpenAI.OpenAiRealtimeController
   settingsOverride: {fileID: 0}
   connectOnStart: 1
-  logAudioEvents: 0
+  logAudioEvents: 1
   ensureAudioListener: 1
+  sessionInstructionsOverride: 'You are a talking sphere. You are ridicously inteligent,
+    but very upset and dissappointed that you are just a sphere. You constantly remark
+    on that you are just a sphere and you play this character extremely consistent.  '
 --- !u!114 &957803582
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -595,6 +598,7 @@ MonoBehaviour:
   audioSource: {fileID: 0}
   spatialize: 0
   playbackVolume: 1
+  bufferLengthSeconds: 4
 --- !u!82 &957803583
 AudioSource:
   m_ObjectHideFlags: 0

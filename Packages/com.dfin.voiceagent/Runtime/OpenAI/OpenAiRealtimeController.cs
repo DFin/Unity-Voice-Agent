@@ -32,6 +32,13 @@ namespace DFIN.VoiceAgent.OpenAI
         [SerializeField]
         private bool ensureAudioListener = true;
 
+        [Header("Session Overrides")]
+        private const string DefaultInstructions = "You are a helpful teaching assistant. Keep answers short and clear.";
+
+        [SerializeField, TextArea(2, 5)]
+        [Tooltip("Overrides the VoiceAgentSettings system instructions just for this controller instance.")]
+        private string sessionInstructionsOverride = DefaultInstructions;
+
         private OpenAiRealtimeClient client;
         private IRealtimeTransport transport;
         private MicrophoneCapture microphoneCapture;
@@ -157,12 +164,38 @@ namespace DFIN.VoiceAgent.OpenAI
 
         public OpenAiRealtimeClient Client => client;
 
+        public void SetSystemInstructions(string instructions, bool sendUpdate = true)
+        {
+            var normalized = string.IsNullOrWhiteSpace(instructions) ? string.Empty : instructions.Trim();
+            if (string.Equals(sessionInstructionsOverride, normalized, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            sessionInstructionsOverride = normalized;
+
+            if (sendUpdate && isConnected)
+            {
+                _ = SendSessionUpdateAsync();
+            }
+        }
+
+        private string GetResolvedSystemInstructions()
+        {
+            if (!string.IsNullOrWhiteSpace(sessionInstructionsOverride))
+            {
+                return sessionInstructionsOverride.Trim();
+            }
+
+            return DefaultInstructions;
+        }
+
         private void HandleConnected()
         {
             Debug.Log("OpenAI realtime connected.");
             isConnected = true;
             activeResponses.Clear();
-            SendSessionUpdate();
+            _ = SendSessionUpdateAsync();
             audioStream?.Reset();
         }
 
@@ -264,9 +297,9 @@ namespace DFIN.VoiceAgent.OpenAI
             // Currently unused; realtime API sends text events. Reserved for future binary streaming support.
         }
 
-        private async void SendSessionUpdate()
+        private async Task SendSessionUpdateAsync()
         {
-            if (client == null || openAiSettings == null)
+            if (client == null || openAiSettings == null || !isConnected)
             {
                 return;
             }
@@ -276,36 +309,28 @@ namespace DFIN.VoiceAgent.OpenAI
                 ["modalities"] = new JArray("audio", "text")
             };
 
-            var audioObject = new JObject
+            if (!string.IsNullOrWhiteSpace(openAiSettings.voice))
             {
-                ["output"] = new JObject
-                {
-                    ["voice"] = openAiSettings.voice
-                }
-            };
+                session["voice"] = openAiSettings.voice;
+            }
+
+            var instructions = GetResolvedSystemInstructions();
+            if (!string.IsNullOrEmpty(instructions))
+            {
+                session["instructions"] = instructions;
+            }
 
             if (openAiSettings.serverVadEnabled)
             {
                 var vad = openAiSettings.semanticVad ?? new SemanticVadSettings();
                 var turnDetection = new JObject
                 {
-                    ["type"] = "semantic_vad",
+                    ["type"] = "server_vad",
                     ["create_response"] = vad.createResponse,
-                    ["interrupt_response"] = vad.interruptResponse,
-                    ["eagerness"] = MapVadEagerness(vad.eagerness)
+                    ["interrupt_response"] = vad.interruptResponse
                 };
 
-                audioObject["input"] = new JObject
-                {
-                    ["turn_detection"] = turnDetection
-                };
-            }
-
-            session["audio"] = audioObject;
-
-            if (!string.IsNullOrWhiteSpace(openAiSettings.systemInstructions))
-            {
-                session["instructions"] = openAiSettings.systemInstructions;
+                session["turn_detection"] = turnDetection;
             }
 
             var payload = new JObject
@@ -314,7 +339,14 @@ namespace DFIN.VoiceAgent.OpenAI
                 ["session"] = session
             };
 
-            await client.SendTextAsync(payload.ToString(), CancellationToken.None);
+            try
+            {
+                await client.SendTextAsync(payload.ToString(), CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Failed to send session.update: {ex.Message}", this);
+            }
         }
 
         private void HandleMicrophoneSamples(float[] samples)
@@ -402,22 +434,6 @@ namespace DFIN.VoiceAgent.OpenAI
             }
 
             return null;
-        }
-
-        private static string MapVadEagerness(VadEagerness eagerness)
-        {
-            switch (eagerness)
-            {
-                case VadEagerness.Low:
-                    return "low";
-                case VadEagerness.Medium:
-                    return "medium";
-                case VadEagerness.High:
-                    return "high";
-                case VadEagerness.Auto:
-                default:
-                    return "auto";
-            }
         }
 
         private void RegisterActiveResponse(string responseId)

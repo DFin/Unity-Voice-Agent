@@ -46,10 +46,6 @@ namespace DFIN.VoiceAgent.Configuration
         [Tooltip("Base WebSocket URL used for realtime sessions.")]
         public string endpointUrl = "wss://api.openai.com/v1/realtime";
 
-        [Tooltip("Default instructions sent on session.start/session.update.")]
-        [TextArea(2, 5)]
-        public string systemInstructions = "You are a helpful teaching assistant. Keep answers short and clear.";
-
         [Tooltip("Requested output voice id (OpenAI voice library).")]
         public string voice = "alloy";
 
