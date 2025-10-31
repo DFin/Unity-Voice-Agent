@@ -13,7 +13,7 @@ Purpose: give human collaborators and coding agents a quick reference on how to 
 - Configuration assets should remain in `Assets/VoiceAgent/Resources/VoiceAgentSettings.asset`; always update the editor tooling if the schema changes and remind users that credentials are stored in plain text.
 - When editing the realtime pipeline, update `docs/openai-gpt-realtime.md` and describe any new request/response flow, especially around microphone buffering or playback changes.
 - `OpenAiAudioStream` + `StreamingAudioPlayer` now produce audible output—if you change the sample rate, resampling, or buffering logic, document it and keep defaults aligned with OpenAI settings (`outputSampleRate`).
-- `OpenAiRealtimeController.CancelActiveResponses()` sends `response.cancel` + buffer clears when mic RMS spikes; keep that behaviour in sync with docs if thresholds or flows change.
+- `OpenAiRealtimeController.CancelActiveResponses()` is available for manual use (no automatic mic-triggered cancels); keep documentation synced if you adjust the messaging it sends.
 - The controller creates a fallback `AudioListener` for empty scenes; adjust documentation if that behavior changes.
 - Prefer incremental commits with clear messages; never rewrite user-made history.
 

@@ -28,8 +28,9 @@ namespace DFIN.VoiceAgent.Audio
         private int outputSampleRate;
         private float[] resampleBuffer;
         private bool isInitialized;
+        private double lastSampleTimestamp;
 
-        private const int MaxBufferedSeconds = 8;
+        private const int MaxBufferedSeconds = 1800;
 
         private void Awake()
         {
@@ -104,6 +105,7 @@ namespace DFIN.VoiceAgent.Audio
             }
 
             TrimQueueIfNeeded();
+            lastSampleTimestamp = AudioSettings.dspTime;
         }
 
         public void Clear()
@@ -112,6 +114,21 @@ namespace DFIN.VoiceAgent.Audio
             {
                 // drain queue
             }
+        }
+
+        public bool HasRecentSamples(double toleranceSeconds = 0.25)
+        {
+            if (!isInitialized)
+            {
+                return false;
+            }
+
+            if (sampleQueue.IsEmpty && streamingClip != null && !audioSource.isPlaying)
+            {
+                return false;
+            }
+
+            return AudioSettings.dspTime - lastSampleTimestamp <= toleranceSeconds;
         }
 
         private void OnAudioRead(float[] data)
@@ -153,4 +170,3 @@ namespace DFIN.VoiceAgent.Audio
         }
     }
 }
-

@@ -45,8 +45,6 @@ namespace DFIN.VoiceAgent.OpenAI
         private bool isConnected;
         private short[] pcmBuffer;
         private byte[] byteBuffer;
-        private float lastCancelTimestamp = float.NegativeInfinity;
-        private const float CancelCooldownSeconds = 0.75f;
 
         private void Awake()
         {
@@ -331,11 +329,6 @@ namespace DFIN.VoiceAgent.OpenAI
             };
 
             _ = client.SendTextAsync(message.ToString(), CancellationToken.None);
-
-            if (ShouldRequestCancel(samples))
-            {
-                CancelActiveResponses();
-            }
         }
 
         private void HandleAudioSamplesAvailable(short[] samples)
@@ -428,34 +421,7 @@ namespace DFIN.VoiceAgent.OpenAI
             }
         }
 
-        private bool ShouldRequestCancel(float[] samples)
-        {
-            if (samples == null || samples.Length == 0)
-            {
-                return false;
-            }
-
-            if (activeResponses.Count == 0)
-            {
-                return false;
-            }
-
-            if (Time.realtimeSinceStartup - lastCancelTimestamp < CancelCooldownSeconds)
-            {
-                return false;
-            }
-
-            double sum = 0;
-            for (var i = 0; i < samples.Length; i++)
-            {
-                sum += samples[i] * samples[i];
-            }
-
-            var rms = Math.Sqrt(sum / samples.Length);
-            return rms > 0.008;
-        }
-
-        private void CancelActiveResponses()
+        public void CancelActiveResponses()
         {
             if (client == null)
             {
@@ -483,7 +449,6 @@ namespace DFIN.VoiceAgent.OpenAI
             SendEvent(new JObject { ["type"] = "input_audio_buffer.clear" });
             audioPlayer?.Clear();
             activeResponses.Clear();
-            lastCancelTimestamp = Time.realtimeSinceStartup;
         }
 
         private void SendEvent(JObject payload)
