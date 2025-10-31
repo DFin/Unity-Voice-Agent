@@ -9,6 +9,7 @@ This documentation folder will contain student-facing guides once the first play
 
 Current progress:
 - VoiceAgentSettings ScriptableObject + editor window (stores OpenAI/ElevenLabs keys).
-- Early scaffolding for realtime client, microphone capture, and streaming audio player (placeholder transport and playback loop).
+- NativeWebSocket transport + OpenAI realtime controller (connects, issues initial session update, relays mic audio, logs server events).
+- Microphone capture and streaming audio player scaffolding; PCM playback pipeline still TODO.
 
 For now, follow the root `plan.md` for engineering progress and `README.md` for repository usage.

@@ -19,10 +19,11 @@ Add both via Package Manager before running the OpenAI pipeline.
 
 **Runtime Scaffolding (Phase 1)**
 
-- `OpenAiRealtimeController` MonoBehaviour loads settings, builds `OpenAiRealtimeClient`, and will drive the realtime loop once transport/audio pipelines are complete.
+- `NativeWebSocketTransport` wraps the NativeWebSocket package so we can connect on desktop, Android, iOS, Quest, and WebGL.
+- `OpenAiRealtimeController` MonoBehaviour loads settings, connects, sends a `session.update`, dispatches NativeWebSocket messages, and forwards mic audio as `input_audio_buffer.append`.
 - `MicrophoneCapture` publishes raw float sample buffers (16 kHz by default) to feed into the realtime API.
 - `StreamingAudioPlayer` queues Unity `AudioClip` instances as a temporary stand-in for streamed playback until PCM decoding is wired up.
-- `NullRealtimeTransport` is a stub used until the NativeWebSocket transport is implemented.
+- The mic bridge currently auto-streams; server-side VAD will trigger responses. Manual commit / response requests will be added alongside tooling UX.
 
 ---
 

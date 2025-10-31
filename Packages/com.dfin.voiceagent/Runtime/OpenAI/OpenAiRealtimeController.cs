@@ -1,6 +1,10 @@
+using System;
 using System.Threading;
+using System.Threading.Tasks;
 using DFIN.VoiceAgent.Configuration;
 using DFIN.VoiceAgent.Networking;
+using DFIN.VoiceAgent.Audio;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 namespace DFIN.VoiceAgent.OpenAI
@@ -9,6 +13,7 @@ namespace DFIN.VoiceAgent.OpenAI
     /// MonoBehaviour entry point for connecting to the OpenAI realtime API.
     /// </summary>
     [DisallowMultipleComponent]
+    [RequireComponent(typeof(MicrophoneCapture))]
     public class OpenAiRealtimeController : MonoBehaviour
     {
         [Header("Configuration")]
@@ -20,8 +25,14 @@ namespace DFIN.VoiceAgent.OpenAI
 
         private OpenAiRealtimeClient client;
         private IRealtimeTransport transport;
+        private MicrophoneCapture microphoneCapture;
 
         private CancellationTokenSource connectionCts;
+        private OpenAiRealtimeSettings openAiSettings;
+
+        private bool isConnected;
+        private short[] pcmBuffer;
+        private byte[] byteBuffer;
 
         private void Awake()
         {
@@ -33,13 +44,18 @@ namespace DFIN.VoiceAgent.OpenAI
                 return;
             }
 
-            transport ??= new NullRealtimeTransport();
-            client = new OpenAiRealtimeClient(settingsAsset.OpenAi, transport);
+            openAiSettings = settingsAsset.OpenAi;
+            microphoneCapture = GetComponent<MicrophoneCapture>();
+
+            transport ??= new NativeWebSocketTransport();
+            client = new OpenAiRealtimeClient(openAiSettings, transport);
 
             client.Connected += HandleConnected;
             client.Closed += HandleClosed;
             client.Error += HandleError;
             client.TextMessageReceived += HandleTextMessage;
+
+            microphoneCapture.SampleReady += HandleMicrophoneSamples;
         }
 
         private async void Start()
@@ -60,6 +76,14 @@ namespace DFIN.VoiceAgent.OpenAI
             }
         }
 
+        private void Update()
+        {
+            if (transport is NativeWebSocketTransport nativeTransport)
+            {
+                nativeTransport.DispatchMessageQueue();
+            }
+        }
+
         private void OnDestroy()
         {
             connectionCts?.Cancel();
@@ -74,6 +98,11 @@ namespace DFIN.VoiceAgent.OpenAI
                 client.TextMessageReceived -= HandleTextMessage;
                 client.Dispose();
                 client = null;
+            }
+
+            if (microphoneCapture != null)
+            {
+                microphoneCapture.SampleReady -= HandleMicrophoneSamples;
             }
 
             transport = null;
@@ -95,11 +124,14 @@ namespace DFIN.VoiceAgent.OpenAI
         private void HandleConnected()
         {
             Debug.Log("OpenAI realtime connected.");
+            isConnected = true;
+            SendSessionUpdate();
         }
 
         private void HandleClosed()
         {
             Debug.Log("OpenAI realtime closed.");
+            isConnected = false;
         }
 
         private void HandleError(System.Exception exception)
@@ -109,7 +141,107 @@ namespace DFIN.VoiceAgent.OpenAI
 
         private void HandleTextMessage(string message)
         {
-            Debug.Log($"[OpenAI Realtime] {message}");
+            if (string.IsNullOrEmpty(message))
+            {
+                return;
+            }
+
+            try
+            {
+                var json = JObject.Parse(message);
+                var type = json["type"]?.ToString();
+                Debug.Log($"[OpenAI Realtime] {type ?? "event"}: {message}", this);
+            }
+            catch (Exception)
+            {
+                Debug.Log($"[OpenAI Realtime] {message}", this);
+            }
+        }
+
+        private async void SendSessionUpdate()
+        {
+            if (client == null || openAiSettings == null)
+            {
+                return;
+            }
+
+            var session = new JObject
+            {
+                ["type"] = "realtime",
+                ["modalities"] = new JArray("audio", "text"),
+                ["audio"] = new JObject
+                {
+                    ["output"] = new JObject
+                    {
+                        ["voice"] = openAiSettings.voice
+                    }
+                }
+            };
+
+            if (!string.IsNullOrWhiteSpace(openAiSettings.systemInstructions))
+            {
+                session["instructions"] = openAiSettings.systemInstructions;
+            }
+
+            if (openAiSettings.serverVadEnabled)
+            {
+                session["turn_detection"] = new JObject
+                {
+                    ["type"] = "server_vad"
+                };
+            }
+
+            var payload = new JObject
+            {
+                ["type"] = "session.update",
+                ["session"] = session
+            };
+
+            await client.SendTextAsync(payload.ToString(), CancellationToken.None);
+        }
+
+        private void HandleMicrophoneSamples(float[] samples)
+        {
+            if (!isConnected || samples == null || samples.Length == 0)
+            {
+                return;
+            }
+
+            EnsureBuffers(samples.Length);
+            ConvertToPcm16(samples, pcmBuffer);
+            Buffer.BlockCopy(pcmBuffer, 0, byteBuffer, 0, pcmBuffer.Length * sizeof(short));
+
+            var base64 = Convert.ToBase64String(byteBuffer, 0, pcmBuffer.Length * sizeof(short));
+            var message = new JObject
+            {
+                ["type"] = "input_audio_buffer.append",
+                ["audio"] = base64
+            };
+
+            _ = client.SendTextAsync(message.ToString(), CancellationToken.None);
+        }
+
+        private void EnsureBuffers(int sampleCount)
+        {
+            if (pcmBuffer == null || pcmBuffer.Length != sampleCount)
+            {
+                pcmBuffer = new short[sampleCount];
+            }
+
+            var byteCount = sampleCount * sizeof(short);
+            if (byteBuffer == null || byteBuffer.Length != byteCount)
+            {
+                byteBuffer = new byte[byteCount];
+            }
+        }
+
+        private static void ConvertToPcm16(float[] source, short[] destination)
+        {
+            for (var i = 0; i < source.Length; i++)
+            {
+                var clamped = Mathf.Clamp(source[i], -1f, 1f);
+                destination[i] = (short)Mathf.FloorToInt(clamped * short.MaxValue);
+            }
         }
     }
 }

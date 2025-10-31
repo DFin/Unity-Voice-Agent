@@ -1,6 +1,9 @@
 {
   "name": "DFIN.VoiceAgent",
-  "references": [],
+  "references": [
+    "endel.nativewebsocket",
+    "Unity.Newtonsoft.Json"
+  ],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
@@ -11,4 +14,3 @@
   "versionDefines": [],
   "noEngineReferences": false
 }
-

@@ -1,6 +1,17 @@
 # Unity Voice Agent Plugin
 
-Early-stage Unity package that wires OpenAI GPT Realtime (and later ElevenLabs) into a reusable voice-agent prefab. Mostly intentended for prototyping (I am doing this for a university lecture to help students get startet). The goal is to ship a simple, open source starting point installable through the Unity Package Manager via Git.
+Minimalistic Unity package that wires OpenAI GPT Realtime and ElevenLabs Voice Agents into a reusable voice-agent prefab. Mostly intentended for prototyping (I am doing this for a university lecture to help students get started). The goal is to have a simple, open source starting point installable through the Unity Package Manager via Git.
+
+##  Scope
+
+This is not intended to be a full library, but rather as a minimalistic starting point for websocket voice AI integration. 
+
+If you are looking for a complete library for OpenAI check out this well maintained OpenAI library:
+https://github.com/RageAgainstThePixel/com.openai.unity 
+
+Also for Elevenlabs voice generation (not agents) rather look at:
+https://github.com/RageAgainstThePixel/com.rest.elevenlabs
+
 
 ## Current Status
 - ✅ Repository scaffolding and planning documents
@@ -13,7 +24,8 @@ Early-stage Unity package that wires OpenAI GPT Realtime (and later ElevenLabs) 
    - `com.unity.nuget.newtonsoft-json` (official Json.NET fork, IL2CPP compatible).
    - `https://github.com/endel/NativeWebSocket.git#upm` (WebSocket layer that works on desktop, Android, iOS, Quest).
 4. Open `Voice Agent → Settings` to create `Assets/VoiceAgent/Resources/VoiceAgentSettings.asset` and enter development API keys.
-5. Read `DEVELOPMENT.md` for coding standards and contribution workflow as they evolve.
+5. Drop `OpenAiRealtimeController` + `MicrophoneCapture` on a GameObject and press Play to exercise the realtime loop (currently streams mic audio and logs responses; audio playback wiring is next).
+6. Read `DEVELOPMENT.md` for coding standards and contribution workflow as they evolve.
 
 ## Installing via UPM (Once Releases Start)
 - Unity Package Manager → `Add package from git URL…`

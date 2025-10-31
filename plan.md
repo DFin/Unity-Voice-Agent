@@ -15,10 +15,10 @@
 
 ## Phase 1 – Core Realtime Voice Loop (OpenAI First Priority)
 - [x] Implement configuration assets & editor window for API keys and session params (no scene inspector reliance).
-- [ ] Create WebSocket client wrapper tailored to OpenAI GPT Realtime streaming (handles authentication, reconnects, event callbacks).
-- [ ] Add microphone capture component (Unity `Microphone` API fallback, with extensibility for other input systems).
+- [x] Create WebSocket client wrapper tailored to OpenAI GPT Realtime streaming (handles authentication, reconnects, event callbacks).
+- [x] Add microphone capture component (Unity `Microphone` API fallback, with extensibility for other input systems).
 - [ ] Implement audio playback pipeline (PCM decoding, `AudioSource` streaming) with optional spatialization flag for VR targets.
-- [ ] Build minimal runtime controller prefab that wires config -> mic capture -> OpenAI streaming -> audio playback; unit/manual tests via console logging only (no visuals yet).
+- [x] Build minimal runtime controller prefab that wires config -> mic capture -> OpenAI streaming -> audio playback; unit/manual tests via console logging only (no visuals yet).
 - [ ] Provide lightweight debugging hooks (logging categories, connection status) for students troubleshooting auth/network issues.
 - [x] Document dependency setup (NativeWebSocket, Newtonsoft JSON) and keep installation instructions aligned with package requirements.
 

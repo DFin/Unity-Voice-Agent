@@ -11,6 +11,7 @@ Purpose: give human collaborators and coding agents a quick reference on how to 
   - `DEVELOPMENT.md` for contributor workflow changes
 - Keep dependency notes current (NativeWebSocket, Newtonsoft JSON, others as added) so new contributors install the correct tooling.
 - Configuration assets should remain in `Assets/VoiceAgent/Resources/VoiceAgentSettings.asset`; always update the editor tooling if the schema changes and remind users that credentials are stored in plain text.
+- When editing the realtime pipeline, update `docs/openai-gpt-realtime.md` and describe any new request/response flow, especially around microphone buffering or playback changes.
 - Prefer incremental commits with clear messages; never rewrite user-made history.
 
 ## Coding Guidelines
