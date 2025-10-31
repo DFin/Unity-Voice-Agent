@@ -188,6 +188,7 @@ namespace DFIN.VoiceAgent.OpenAI
                 switch (type)
                 {
                     case "response.output_audio.delta":
+                    {
                         var audio = ExtractAudioBase64(json);
                         if (!string.IsNullOrEmpty(audio))
                         {
@@ -198,7 +199,22 @@ namespace DFIN.VoiceAgent.OpenAI
                             }
                         }
                         break;
+                    }
+                    case "response.audio.delta":
+                    {
+                        var audio = json["delta"]?.ToString();
+                        if (!string.IsNullOrEmpty(audio))
+                        {
+                            audioStream?.AppendDelta(audio);
+                            if (logAudioEvents)
+                            {
+                                Debug.Log($"[OpenAI Realtime] Appended audio delta ({audio.Length} chars)", this);
+                            }
+                        }
+                        break;
+                    }
                     case "response.output_audio.done":
+                    case "response.audio.done":
                         if (logAudioEvents)
                         {
                             Debug.Log("[OpenAI Realtime] Audio segment done", this);
@@ -227,7 +243,6 @@ namespace DFIN.VoiceAgent.OpenAI
 
             var session = new JObject
             {
-                ["type"] = "realtime",
                 ["modalities"] = new JArray("audio", "text")
             };
 
