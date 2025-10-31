@@ -1,0 +1,30 @@
+{
+  "name": "com.dfin.voiceagent",
+  "version": "0.1.0",
+  "displayName": "Voice Agent Starter",
+  "description": "Student-friendly starting point for building voice-driven agents with OpenAI GPT Realtime and ElevenLabs in Unity.",
+  "unity": "6000.2",
+  "unityRelease": "9f1",
+  "documentationUrl": "https://github.com/<your-org-or-username>/unity-voice-agent#readme",
+  "changelogUrl": "https://github.com/<your-org-or-username>/unity-voice-agent/releases",
+  "licensesUrl": "https://github.com/<your-org-or-username>/unity-voice-agent/blob/main/LICENSE",
+  "keywords": [
+    "voice",
+    "ai",
+    "education",
+    "openai",
+    "elevenlabs"
+  ],
+  "author": {
+    "name": "dfin",
+    "url": "https://github.com/dfin"
+  },
+  "samples": [
+    {
+      "displayName": "Basic Voice Agent",
+      "description": "Minimal scene demonstrating the GPT realtime voice loop.",
+      "path": "Samples~/BasicVoiceAgent"
+    }
+  ]
+}
+
