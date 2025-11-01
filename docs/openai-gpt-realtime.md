@@ -134,6 +134,7 @@ The model will emit tool‑call events on responses; your app runs the function 
 
 - `session.created` / `session.updated`
 - `input_audio_buffer.speech_started` / `speech_stopped` (when using server VAD)
+- `response.done` (status `cancelled`, reason `turn_detected`) when the server interrupts output
 - `response.output_audio.delta` / `response.audio.delta` and their corresponding `…done`
 - Tool‑call events on `response.*` (names may evolve; switch on the `type` string and read payload)
 

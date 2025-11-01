@@ -276,12 +276,24 @@ namespace DFIN.VoiceAgent.OpenAI
                         {
                             activeResponses.Remove(responseId);
                         }
+
+                        var status = json["response"]?["status"]?.ToString();
+                        if (!string.IsNullOrEmpty(status) && string.Equals(status, "cancelled", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var reason = json["response"]?["status_details"]?["reason"]?.ToString();
+                            if (string.Equals(reason, "turn_detected", StringComparison.OrdinalIgnoreCase))
+                            {
+                                audioStream?.MarkSegmentComplete();
+                                audioPlayer?.Clear();
+                            }
+                        }
                         break;
                     case "input_audio_buffer.speech_started":
                         if (logAudioEvents)
                         {
                             Debug.Log("[OpenAI Realtime] input_audio_buffer.speech_started", this);
                         }
+                        audioStream?.MarkSegmentComplete();
                         audioPlayer?.Clear();
                         break;
                 }
