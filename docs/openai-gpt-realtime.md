@@ -130,17 +130,50 @@ The model will emit tool‑call events on responses; your app runs the function 
 
 ### Unity integration
 
-- Annotate any `MonoBehaviour` method with `[RealtimeTool("Description here.")]` and optionally label parameters with `[RealtimeToolParam("...")]`.
-- The `OpenAiRealtimeController` discovers these at runtime, publishes the schemas in `session.update`, and dispatches `function_call` responses back to the annotated method.
-- Return values are serialized (or ignored if `void`); errors are relayed to the model so it can recover.
-- Example:  
-  ```csharp
-  [RealtimeTool("Sets the sphere's world X position between -1 and 1 meters.")]
-  public void SetSphereX([RealtimeToolParam("Absolute world X position (-1 .. 1).")] float x)
-  {
-      transform.position = new Vector3(Mathf.Clamp(x, -1f, 1f), transform.position.y, transform.position.z);
-  }
-  ```
+1. **Add the annotations**
+   ```csharp
+   using DFIN.VoiceAgent.OpenAI;
+
+   public class MoveCube : MonoBehaviour
+   {
+       [RealtimeTool("Moves the cube to an absolute X coordinate between -1 and 1.")]
+       public void SetCubeX(
+           [RealtimeToolParam("Absolute world X position (-1 .. 1).")] float x)
+       {
+           transform.position = new Vector3(Mathf.Clamp(x, -1f, 1f), transform.position.y, transform.position.z);
+       }
+   }
+   ```
+   - `[RealtimeTool]` applies to the method. The optional `name:` argument lets you override the function name exposed to the model; otherwise the method name is used.
+   - `[RealtimeToolParam]` describes each argument. `required` defaults to `true`.
+
+2. **Supported parameter types**
+
+   | C# type                       | JSON schema type | Notes                                         |
+   | ----------------------------- | ---------------- | --------------------------------------------- |
+   | `string`                      | `"string"`       |                                               |
+   | `bool`                        | `"boolean"`      |                                               |
+   | Any integer type (`int`, …)   | `"integer"`      |                                               |
+   | `float`, `double`, `decimal`  | `"number"`       |                                               |
+   | `enum`                        | `"string"`       | Enum values are emitted as an `"enum"` array. |
+
+   Optional parameters must either be nullable or have a default value. Unsupported types will log a warning and the method is skipped.
+
+3. **Discovery & session update**
+
+   `OpenAiRealtimeController` scans every `MonoBehaviour` in the scene right before it sends `session.update`. Each annotated method becomes an entry in the `tools` array and `tool_choice` is set to `"auto"`.
+
+4. **Invocation**
+
+   When the model issues a `function_call`, the controller:
+   - Parses the arguments into a `JObject` and converts them to the method’s parameter types.
+   - Invokes the method on the Unity main thread.
+   - Serializes the return value (if any) and streams it back via `conversation.item.create` followed by `response.create`. `void` methods send a default “Tool call handled.” message.
+   - If the method throws, the error message is forwarded to the model so it can recover.
+
+5. **Scene workflow**
+
+   Drop the component with the annotated method into the scene (or include it on a prefab). No additional registration is required—enter Play mode and the controller will advertise the tool automatically.
 
 ---
 
