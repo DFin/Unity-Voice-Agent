@@ -15,6 +15,7 @@ Purpose: give human collaborators and coding agents a quick reference on how to 
 - `OpenAiAudioStream` + `StreamingAudioPlayer` now produce audible output—if you change the sample rate, resampling, or buffering logic, document it and keep defaults aligned with OpenAI settings (`outputSampleRate`).
 - `OpenAiRealtimeController.CancelActiveResponses()` is available for manual use (no automatic mic-triggered cancels); keep documentation synced if you adjust the messaging it sends.
 - `input_audio_buffer.speech_started` clears the local playback queue—update docs if that flow changes or additional server events are handled (we also watch for `response.done` cancellations).
+- Function-calling hooks are driven by `[RealtimeTool]` / `[RealtimeToolParam]` attributes; keep schemas descriptive so students can follow along.
 - The controller creates a fallback `AudioListener` for empty scenes; adjust documentation if that behavior changes.
 - Prefer incremental commits with clear messages; never rewrite user-made history.
 

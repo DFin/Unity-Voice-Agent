@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 7794384193211650826}
   - component: {fileID: 7794384193211650827}
   - component: {fileID: 7794384193211650828}
+  - component: {fileID: 7794384193211650830}
   m_Layer: 0
   m_Name: SarcasticSphereAgent
   m_TagString: Untagged
@@ -248,6 +249,21 @@ MonoBehaviour:
   responseSpeed: 8
   sampleWindow: 64
   sensitivity: 14
+--- !u!114 &7794384193211650830
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7794384193211650820}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b6a087990b8419ba38c4e8c4dffc59f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 0}
+  minX: -1
+  maxX: 1
 --- !u!1001 &7794384193211650829
 Prefab:
   m_ObjectHideFlags: 1

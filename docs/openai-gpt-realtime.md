@@ -128,6 +128,20 @@ Register tool schemas up front, then handle tool calls on the stream:
 
 The model will emit tool‑call events on responses; your app runs the function and streams back the tool result.
 
+### Unity integration
+
+- Annotate any `MonoBehaviour` method with `[RealtimeTool("Description here.")]` and optionally label parameters with `[RealtimeToolParam("...")]`.
+- The `OpenAiRealtimeController` discovers these at runtime, publishes the schemas in `session.update`, and dispatches `function_call` responses back to the annotated method.
+- Return values are serialized (or ignored if `void`); errors are relayed to the model so it can recover.
+- Example:  
+  ```csharp
+  [RealtimeTool("Sets the sphere's world X position between -1 and 1 meters.")]
+  public void SetSphereX([RealtimeToolParam("Absolute world X position (-1 .. 1).")] float x)
+  {
+      transform.position = new Vector3(Mathf.Clamp(x, -1f, 1f), transform.position.y, transform.position.z);
+  }
+  ```
+
 ---
 
 ## 7) Common server events to expect (non‑exhaustive)

@@ -47,6 +47,7 @@ namespace DFIN.VoiceAgent.OpenAI
         private readonly HashSet<string> activeResponses = new();
 
         private CancellationTokenSource connectionCts;
+        private RealtimeToolRegistry toolRegistry;
         private OpenAiRealtimeSettings openAiSettings;
 
         private bool isConnected;
@@ -69,6 +70,7 @@ namespace DFIN.VoiceAgent.OpenAI
 
             transport ??= new NativeWebSocketTransport();
             client = new OpenAiRealtimeClient(openAiSettings, transport);
+            toolRegistry = new RealtimeToolRegistry();
 
             client.Connected += HandleConnected;
             client.Closed += HandleClosed;
@@ -287,6 +289,18 @@ namespace DFIN.VoiceAgent.OpenAI
                                 audioPlayer?.Clear();
                             }
                         }
+
+                        var output = json["response"]?["output"] as JArray;
+                        if (output != null)
+                        {
+                            foreach (var part in output)
+                            {
+                                if (part?["type"]?.ToString() == "function_call")
+                                {
+                                    HandleFunctionCall(part);
+                                }
+                            }
+                        }
                         break;
                     case "input_audio_buffer.speech_started":
                         if (logAudioEvents)
@@ -330,6 +344,14 @@ namespace DFIN.VoiceAgent.OpenAI
             if (!string.IsNullOrEmpty(instructions))
             {
                 session["instructions"] = instructions;
+            }
+
+            toolRegistry?.DiscoverSceneTools();
+            var tools = toolRegistry?.BuildToolSchema();
+            if (tools != null && tools.Count > 0)
+            {
+                session["tools"] = tools;
+                session["tool_choice"] = "auto";
             }
 
             ApplyTurnDetection(session);
@@ -443,6 +465,126 @@ namespace DFIN.VoiceAgent.OpenAI
             if (logAudioEvents)
             {
                 Debug.Log($"[OpenAI Realtime] Queued audio segment ({samples.Length} samples @ {outputSampleRate} Hz)", this);
+            }
+        }
+
+        private void HandleFunctionCall(JToken part)
+        {
+            _ = ProcessFunctionCallAsync(part);
+        }
+
+        private async System.Threading.Tasks.Task ProcessFunctionCallAsync(JToken part)
+        {
+            if (part == null || toolRegistry == null)
+            {
+                return;
+            }
+
+            var callId = part["call_id"]?.ToString();
+            var toolName = part["name"]?.ToString();
+            var argumentsToken = part["arguments"];
+
+            if (string.IsNullOrWhiteSpace(callId) || string.IsNullOrWhiteSpace(toolName))
+            {
+                Debug.LogWarning("[OpenAI Realtime] Received function_call part without call_id or name.");
+                return;
+            }
+
+            if (!toolRegistry.TryGetTool(toolName, out var definition))
+            {
+                Debug.LogWarning($"[OpenAI Realtime] Unknown tool requested: {toolName}");
+                await SendToolResultAsync(callId, $"Tool '{toolName}' is not available.");
+                return;
+            }
+
+            JObject arguments = null;
+            if (argumentsToken != null)
+            {
+                try
+                {
+                    if (argumentsToken.Type == JTokenType.String)
+                    {
+                        var text = argumentsToken.ToString();
+                        arguments = string.IsNullOrWhiteSpace(text) ? new JObject() : JObject.Parse(text);
+                    }
+                    else if (argumentsToken.Type == JTokenType.Object)
+                    {
+                        arguments = (JObject)argumentsToken;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[OpenAI Realtime] Failed to parse tool arguments for '{toolName}': {ex.Message}");
+                    await SendToolResultAsync(callId, $"Failed to parse tool arguments: {ex.Message}");
+                    return;
+                }
+            }
+
+            var result = definition.Invoke(arguments, out var error);
+            if (!string.IsNullOrEmpty(error))
+            {
+                Debug.LogWarning($"[OpenAI Realtime] Tool '{toolName}' error: {error}");
+                await SendToolResultAsync(callId, $"Tool '{toolName}' error: {error}");
+                return;
+            }
+
+            string output = null;
+            if (result is string str)
+            {
+                output = str;
+            }
+            else if (result != null)
+            {
+                try
+                {
+                    output = Newtonsoft.Json.JsonConvert.SerializeObject(result);
+                }
+                catch
+                {
+                    output = result.ToString();
+                }
+            }
+
+            await SendToolResultAsync(callId, output);
+        }
+
+        private async System.Threading.Tasks.Task SendToolResultAsync(string callId, string output)
+        {
+            if (client == null || string.IsNullOrWhiteSpace(callId))
+            {
+                return;
+            }
+
+            var message = string.IsNullOrWhiteSpace(output) ? "Tool call handled." : output.Trim();
+
+            var toolResponse = new JObject
+            {
+                ["type"] = "conversation.item.create",
+                ["item"] = new JObject
+                {
+                    ["type"] = "function_call_output",
+                    ["call_id"] = callId,
+                    ["output"] = message
+                }
+            };
+
+            var resume = new JObject
+            {
+                ["type"] = "response.create",
+                ["response"] = new JObject
+                {
+                    ["conversation"] = "auto"
+                }
+            };
+
+            try
+            {
+                await client.SendTextAsync(toolResponse.ToString(), CancellationToken.None);
+                await client.SendTextAsync(resume.ToString(), CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[OpenAI Realtime] Failed to send tool response: {ex.Message}", this);
             }
         }
 
