@@ -16,6 +16,8 @@ https://github.com/RageAgainstThePixel/com.rest.elevenlabs
 ## Current Status
 - ✅ Repository scaffolding and planning documents
 - ✅ Realtime OpenAI voice loop with large streaming buffer & server-driven interruption handling
+- ✅ Attribute-based function calling: annotate any `MonoBehaviour` method with `[RealtimeTool]` to expose it as an OpenAI tool
+- ✅ Sample prefab (`SarcasticSphereAgent`) demonstrating realtime playback, audio-reactive scaling, and tool-controlled movement
 - 🔄 Expanding debugging tooling and ElevenLabs support (see `plan.md` for roadmap)
 
 ## Getting Started (Development)
@@ -27,7 +29,32 @@ https://github.com/RageAgainstThePixel/com.rest.elevenlabs
 4. Open `Voice Agent → Settings` to create `Assets/VoiceAgent/Resources/VoiceAgentSettings.asset`, enter development API keys, and adjust options (model defaults to `gpt-realtime`, semantic VAD behavior, voice, output sample rate).
 5. Drop `OpenAiRealtimeController` on a GameObject (the required mic/audio components are added automatically). On play, the controller will create a fallback `AudioListener` if your scene does not already have one, then stream mic input and play back the model's audio responses in real time. If you need to stop playback, call `CancelActiveResponses()` manually.
    - The built-in streaming queue holds roughly 30 minutes of PCM audio by default; adjust `StreamingAudioPlayer.MaxBufferedSeconds` if you want a different memory/latency trade-off.
-6. Read `DEVELOPMENT.md` for coding standards and contribution workflow as they evolve.
+6. Try the sample prefab under `Assets/VoiceAgent/Prefabs/SarcasticSphereAgent.prefab`. It wires in the realtime controller, an audio-reactive scaler, and a tool that lets the model move the sphere along the X-axis (clamped to `[-1, 1]`) using the new annotation system.
+7. Read `DEVELOPMENT.md` for coding standards and contribution workflow as they evolve.
+
+## Function Calling via Annotations
+
+Expose Unity methods to the OpenAI Realtime model with one attribute:
+
+```csharp
+using DFIN.VoiceAgent.OpenAI;
+
+public class MoveCube : MonoBehaviour
+{
+    [RealtimeTool("Moves the cube to an absolute X coordinate between -1 and 1.")]
+    public void SetCubeX(
+        [RealtimeToolParam("Absolute world X position (-1 .. 1).")] float x)
+    {
+        transform.position = new Vector3(Mathf.Clamp(x, -1f, 1f), transform.position.y, transform.position.z);
+    }
+}
+```
+
+- `[RealtimeTool]` marks the method; the optional `name` argument overrides the function name exposed to the model.
+- `[RealtimeToolParam]` documents each argument and controls whether it is required (defaults to `true`).
+- Supported parameter types: strings, booleans, numeric types, and enums. Optional parameters must be nullable or supply a default value.
+- `OpenAiRealtimeController` discovers tools automatically at runtime, advertises them in `session.update`, and invokes them when the model issues a `function_call`. Return values are serialized and streamed back; void methods send a default “Tool call handled.” message.
+- Check `SphereMovementTool` for a concrete example included in the package.
 
 ## Installing via UPM (Once Releases Start)
 - Unity Package Manager → `Add package from git URL…`
