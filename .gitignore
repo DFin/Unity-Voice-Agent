@@ -8,6 +8,10 @@
 [Uu]ser[Ss]ettings/
 [Aa]ssets/AssetStoreTools*
 
+# Local configuration assets containing secrets
+Assets/VoiceAgent/Resources/VoiceAgentSettings.asset
+Assets/VoiceAgent/Resources/VoiceAgentSettings.asset.meta
+
 # Rider / VS / VSCode
 .idea/
 .vs/
