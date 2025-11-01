@@ -69,7 +69,7 @@ public class MoveCube : MonoBehaviour
 
 ## Installing via UPM (Once Releases Start)
 - Unity Package Manager → `Add package from git URL…`
-- Use `https://github.com/<your-org-or-username>/unity-voice-agent.git#path=Packages/com.dfin.voiceagent`
+- Use `https://github.com/dfin/unity-voice-agent.git#path=Packages/com.dfin.voiceagent`
 
 ## Documentation
 - `plan.md` – phased technical roadmap (kept up to date during development).
