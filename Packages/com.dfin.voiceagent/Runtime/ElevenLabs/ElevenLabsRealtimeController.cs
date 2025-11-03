@@ -639,6 +639,16 @@ namespace DFIN.VoiceAgent.ElevenLabs
                 }
             }
 
+            var base64Token = json.SelectTokens("$..audio_base_64").Concat(json.SelectTokens("$..audio_base64")).OfType<JValue>().FirstOrDefault(v => v.Type == JTokenType.String);
+            if (base64Token != null)
+            {
+                var value = base64Token.ToString();
+                if (!string.IsNullOrEmpty(value))
+                {
+                    return value;
+                }
+            }
+
             return null;
         }
     }
