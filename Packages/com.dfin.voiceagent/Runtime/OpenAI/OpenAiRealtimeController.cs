@@ -35,7 +35,7 @@ namespace DFIN.VoiceAgent.OpenAI
         [Header("Session Overrides")]
         private const string DefaultInstructions = "You are a helpful teaching assistant. Keep answers short and clear.";
 
-        [SerializeField, TextArea(2, 5)]
+        [SerializeField, TextArea(6, 20)]
         [Tooltip("Overrides the VoiceAgentSettings system instructions just for this controller instance.")]
         private string sessionInstructionsOverride = DefaultInstructions;
 
