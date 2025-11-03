@@ -467,10 +467,18 @@ namespace DFIN.VoiceAgent.ElevenLabs
             }
 
             var payload = new JObject { ["type"] = "pong" };
-            var pingId = ping?["ping_id"] ?? ping?["id"];
+            var pingEvent = ping?["ping_event"] as JObject;
+            var pingId = pingEvent?["event_id"] ?? ping?["ping_id"] ?? ping?["id"];
+
             if (pingId != null)
             {
+                payload["event_id"] = pingId;
                 payload["ping_id"] = pingId;
+            }
+
+            if (pingEvent?["ping_ms"] != null)
+            {
+                payload["ping_ms"] = pingEvent["ping_ms"];
             }
 
             _ = client.SendTextAsync(payload.ToString(), CancellationToken.None);

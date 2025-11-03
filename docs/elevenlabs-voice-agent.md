@@ -13,6 +13,21 @@ This page shows the minimal messages we use to talk to an **Agent** over WebSock
 
 - Public agents can use the URL directly. Private agents typically use a signed URL from your server. For student projects, a public agent ID is the simplest path.
 
+### Private agents: request a signed conversation URL
+
+ElevenLabs expects private agents to connect through a **signed URL** that expires quickly. The official JavaScript sample ships a tiny Express backend that exchanges your `xi-api-key` for a signed conversation URL:
+
+```
+GET https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=<AGENT_ID>
+xi-api-key: <XI_API_KEY>
+```
+
+The response contains at least `{"signed_url": "wss://..."}` (additional metadata may be included). Your game/server forwards that URL to the Unity client, which then connects with the plain WebSocket constructor.
+
+- Environment variables used by the sample: `XI_API_KEY`, `AGENT_ID`, and optional `PORT`.
+- If you expose a helper endpoint (e.g. `/api/signed-url`), keep it server-side only—SDKs are expected to fetch the signed URL moments before connecting.
+- Public/education agents can still use the direct `agent_id` URL without signing.
+
 ---
 
 ## 2) (Optional) Override voice at start
@@ -70,7 +85,28 @@ Run your Unity/C# handler, then **reply**:
 
 ## 5) Ping/Pong
 
-The server may send `ping` with `ping_ms`; reply with `pong` to keep the session healthy.
+The server may send `ping` events, often shaped like:
+
+```
+{
+  "type": "ping",
+  "ping_event": {
+    "event_id": 2,
+    "ping_ms": null
+  }
+}
+```
+
+Reply with `pong` while echoing back the identifier:
+
+```
+{
+  "type": "pong",
+  "event_id": 2
+}
+```
+
+Including the original `ping_ms` (when provided) is harmless. Failing to bounce back the `event_id` leads to the server closing the socket.
 
 ---
 
@@ -82,3 +118,10 @@ The server may send `ping` with `ping_ms`; reply with `pong` to keep the session
 - Set **Voice Override** on the controller (or in project settings) to send a `conversation_initiation_client_data` payload immediately after connect.
 - Console logging is opt-in via the controller’s **Log Events** / **Log Audio Events** toggles so students can inspect `vad_score`, transcripts, tool calls, and ping/pong flow while iterating.
 - Tool calls use the same `[RealtimeTool]` attributes as the OpenAI pipeline. When the agent emits `client_tool_call`, the controller looks up the registered method and replies with `client_tool_result` automatically.
+
+### Notes from the JavaScript sample (`@elevenlabs/client`)
+
+- The browser requests microphone access (`navigator.mediaDevices.getUserMedia`) *before* attempting to connect.
+- `Conversation.startSession` accepts either a freshly signed URL (`signedUrl`) or a direct `agentId` for public agents and exposes callbacks for `onConnect`, `onDisconnect`, `onError`, and `onModeChange`.
+- `onModeChange` reports an object that contains a `mode` string (`speaking`, `listening`, etc.), which you can mirror to drive UI feedback.
+- Ending a call is simply `conversation.endSession()`, which closes the WebSocket and transitions the agent back to a listening state.
