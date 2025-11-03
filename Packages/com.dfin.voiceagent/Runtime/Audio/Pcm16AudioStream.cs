@@ -1,12 +1,11 @@
 using System;
-using System.Collections.Generic;
 
-namespace DFIN.VoiceAgent.OpenAI
+namespace DFIN.VoiceAgent.Audio
 {
     /// <summary>
-    /// Aggregates OpenAI realtime audio deltas into PCM16 buffers.
+    /// Aggregates base64 PCM16 audio deltas into short sample buffers.
     /// </summary>
-    public class OpenAiAudioStream
+    public class Pcm16AudioStream
     {
         public event Action<short[]> SamplesAvailable;
         public event Action SegmentCompleted;

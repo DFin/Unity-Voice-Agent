@@ -11,6 +11,6 @@ This document will outline the contributor workflow as the project grows. Initia
   - `NativeWebSocketTransport` implements the cross-platform WebSocket layer.
   - `OpenAiRealtimeController` loads config, connects, sends `session.update`, streams microphone audio, logs events, drives playback, spawns a fallback `AudioListener` if a scene is missing one, and exposes `CancelActiveResponses()` to forward `response.cancel` / buffer-clear messages on demand.
   - `MicrophoneCapture` emits float buffers (16 kHz) consumed by the realtime controller.
-  - `OpenAiAudioStream` forwards realtime audio deltas and `StreamingAudioPlayer` writes them into a streaming AudioClip (with 24 kHz → output resampling and optional spatial playback).
+  - `Pcm16AudioStream` forwards realtime audio deltas and `StreamingAudioPlayer` writes them into a streaming AudioClip (with resampling and optional spatial playback).
 
 Additional guidelines (style rules, testing strategy, PR template) will be added once core systems land.

@@ -51,7 +51,7 @@ namespace DFIN.VoiceAgent.OpenAI
         private IRealtimeTransport transport;
         private MicrophoneCapture microphoneCapture;
         private StreamingAudioPlayer audioPlayer;
-        private OpenAiAudioStream audioStream;
+        private Pcm16AudioStream audioStream;
         private readonly HashSet<string> activeResponses = new();
 
         private CancellationTokenSource connectionCts;
@@ -94,7 +94,7 @@ namespace DFIN.VoiceAgent.OpenAI
             client.BinaryMessageReceived += HandleBinaryMessage;
 
             microphoneCapture.SampleReady += HandleMicrophoneSamples;
-            audioStream = new OpenAiAudioStream();
+            audioStream = new Pcm16AudioStream();
             audioStream.SamplesAvailable += HandleAudioSamplesAvailable;
             audioStream.SegmentCompleted += HandleAudioSegmentCompleted;
 

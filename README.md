@@ -29,7 +29,8 @@ If someones wants to maintain this feel free to fork it and I will link to your 
 - ✅ Realtime OpenAI voice loop with large streaming buffer & server-driven interruption handling
 - ✅ Attribute-based function calling: annotate any `MonoBehaviour` method with `[RealtimeTool]` to expose it as an OpenAI tool
 - ✅ Sample prefab (`SarcasticSphereAgent`) demonstrating realtime playback, audio-reactive scaling, and tool-controlled movement
-- 🔄 Expanding debugging tooling and ElevenLabs support (see `plan.md` for roadmap)
+- ✅ ElevenLabs realtime controller (streaming audio playback + tool-call bridge)
+- 🔄 Additional debugging tooling (see `plan.md` for roadmap)
 
 ## Getting Started (Development)
 1. Clone this repository and open the root Unity project (tested with `6000.2.9f1`).
@@ -37,14 +38,15 @@ If someones wants to maintain this feel free to fork it and I will link to your 
 3. Install supporting dependencies via the Unity Package Manager:
    - `com.unity.nuget.newtonsoft-json` (official Json.NET fork, IL2CPP compatible).
    - `https://github.com/endel/NativeWebSocket.git#upm` (WebSocket layer that works on desktop, Android, iOS, Quest).
-4. Open `Voice Agent → Settings` to create `Assets/VoiceAgent/Resources/VoiceAgentSettings.asset`, enter development API keys, and adjust options (model defaults to `gpt-realtime`, semantic VAD behavior, output sample rate). Configure the response **voice** per prefab via the `OpenAiRealtimeController` component.
+4. Open `Voice Agent → Settings` to create `Assets/VoiceAgent/Resources/VoiceAgentSettings.asset`, enter development API keys, and adjust options. The OpenAI section stores realtime model defaults and VAD settings; the ElevenLabs section stores the `xi-api-key`, agent id, optional voice override, and expected output sample rate.
 5. Drop `OpenAiRealtimeController` on a GameObject (the required mic/audio components are added automatically). On play, the controller will create a fallback `AudioListener` if your scene does not already have one, then stream mic input and play back the model's audio responses in real time. If you need to stop playback, call `CancelActiveResponses()` manually.
    - The built-in streaming queue holds roughly 30 minutes of PCM audio by default; adjust `StreamingAudioPlayer.MaxBufferedSeconds` if you want a different memory/latency trade-off.
    - The inspector exposes `Request Initial Response On Connect`; leave it checked if you want an automatic greeting (`response.create`) right after `session.update`, or disable it for a silent start.
-6. Try the sample prefabs under `Assets/VoiceAgent/Prefabs/`:
+6. For an ElevenLabs-only prototype, add `ElevenLabsRealtimeController` alongside `MicrophoneCapture` and `StreamingAudioPlayer`. Set **Connect On Start**, paste a valid API key + agent id into the settings asset, and optionally enable **Log Events** to see transcripts/VAD scores in the console.
+7. Try the sample prefabs under `Assets/VoiceAgent/Prefabs/`:
    - `SarcasticSphereAgent.prefab` wires in the realtime controller, an audio-reactive scaler, and a tool that lets the model move the sphere along the X-axis (clamped to `[-1, 1]`).
    - `EducationalCubeAgent.prefab` swaps the sphere for a cube with three clickable mini-cubes. Each click raises a `[RealtimeEvent]`, interrupts playback, and lets the agent guide students through the right sequence while exposing a reset tool. Both prefabs ship with the initial-response toggle enabled so they greet you as soon as Play mode starts.
-7. Read `DEVELOPMENT.md` for coding standards and contribution workflow as they evolve.
+8. Read `DEVELOPMENT.md` for coding standards and contribution workflow as they evolve.
 
 ## Function Calling via Annotations
 

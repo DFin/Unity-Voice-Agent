@@ -12,7 +12,7 @@ Purpose: give human collaborators and coding agents a quick reference on how to 
 - Keep dependency notes current (NativeWebSocket, Newtonsoft JSON, others as added) so new contributors install the correct tooling.
 - Configuration assets should remain in `Assets/VoiceAgent/Resources/VoiceAgentSettings.asset`; always update the editor tooling if the schema changes and remind users that credentials are stored in plain text.
 - When editing the realtime pipeline, update `docs/openai-gpt-realtime.md` and describe any new request/response flow, especially around microphone buffering or playback changes.
-- `OpenAiAudioStream` + `StreamingAudioPlayer` now produce audible output—if you change the sample rate, resampling, or buffering logic, document it and keep defaults aligned with OpenAI settings (`outputSampleRate`).
+- `Pcm16AudioStream` + `StreamingAudioPlayer` now produce audible output—if you change the sample rate, resampling, or buffering logic, document it and keep defaults aligned with the target service settings (`OpenAiRealtimeSettings.outputSampleRate`, `ElevenLabsVoiceSettings.outputSampleRate`).
 - `OpenAiRealtimeController.CancelActiveResponses()` is available for manual use (no automatic mic-triggered cancels); keep documentation synced if you adjust the messaging it sends.
 - `input_audio_buffer.speech_started` clears the local playback queue—update docs if that flow changes or additional server events are handled (we also watch for `response.done` cancellations).
 - Function-calling hooks are driven by `[RealtimeTool]` / `[RealtimeToolParam]` attributes; keep schemas descriptive so students can follow along.

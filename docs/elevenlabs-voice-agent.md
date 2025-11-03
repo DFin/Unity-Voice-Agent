@@ -71,3 +71,14 @@ Run your Unity/C# handler, then **reply**:
 ## 5) Ping/Pong
 
 The server may send `ping` with `ping_ms`; reply with `pong` to keep the session healthy.
+
+---
+
+## Unity Integration
+
+- `VoiceAgentSettings.ElevenLabs` now stores the API key, agent id, optional voice override, default endpoint, and expected output sample rate. Create or edit the asset via **Voice Agent → Settings** in the editor.
+- Add `ElevenLabsRealtimeController` to a GameObject that also has `MicrophoneCapture` and `StreamingAudioPlayer`. Enable **Connect On Start** to establish the socket automatically during `Start()`.
+- The controller wraps `ElevenLabsRealtimeClient` (for WebSocket + `xi-api-key` auth) and reuses `Pcm16AudioStream` + `StreamingAudioPlayer` to decode PCM16 frames and enqueue them for playback.
+- Set **Voice Override** on the controller (or in project settings) to send a `conversation_initiation_client_data` payload immediately after connect.
+- Console logging is opt-in via the controller’s **Log Events** / **Log Audio Events** toggles so students can inspect `vad_score`, transcripts, tool calls, and ping/pong flow while iterating.
+- Tool calls use the same `[RealtimeTool]` attributes as the OpenAI pipeline. When the agent emits `client_tool_call`, the controller looks up the registered method and replies with `client_tool_result` automatically.

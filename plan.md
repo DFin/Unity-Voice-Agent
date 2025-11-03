@@ -24,7 +24,7 @@
 - [x] Document dependency setup (NativeWebSocket, Newtonsoft JSON) and keep installation instructions aligned with package requirements.
 
 ## Phase 2 – ElevenLabs Voice Output Integration
-- [ ] Reuse WebSocket/shared transport layer where possible; isolate ElevenLabs-specific session handling.
+- [x] Reuse WebSocket/shared transport layer where possible; isolate ElevenLabs-specific session handling.
 - [ ] Implement separate prefab for ElevenLabs voice pipeline, sharing base classes for microphone handling and playback when feasible.
 - [ ] Support switching/combining OpenAI text generation with ElevenLabs TTS output pathways.
 - [ ] Ensure spatial audio and volume-based feedback outputs remain configurable.

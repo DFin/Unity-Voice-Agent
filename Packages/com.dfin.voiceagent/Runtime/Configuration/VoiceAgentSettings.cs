@@ -59,11 +59,23 @@ namespace DFIN.VoiceAgent.Configuration
     [Serializable]
     public class ElevenLabsVoiceSettings
     {
-        [Tooltip("API key for ElevenLabs streaming voice. Currently unused; planned for Phase 2.")]
+        [Tooltip("API key for ElevenLabs streaming voice. Stored in plain text; rotate regularly.")]
         public string apiKey = string.Empty;
 
-        [Tooltip("Default voice id to request for ElevenLabs playback.")]
+        [Tooltip("Agent identifier assigned by ElevenLabs.")]
+        public string agentId = string.Empty;
+
+        [Tooltip("Optional voice id override. Leave blank to use the agent's default voice.")]
         public string voiceId = string.Empty;
+
+        [Tooltip("Base WebSocket URL for ElevenLabs conversations.")]
+        public string endpointUrl = "wss://api.elevenlabs.io/v1/convai/conversation";
+
+        [Tooltip("If provided, this full URL is used instead of constructing one from endpoint+agent id (useful for signed URLs).")]
+        public string conversationUrlOverride = string.Empty;
+
+        [Tooltip("Expected sample rate (Hz) of audio returned by the agent. Defaults to 16 kHz.")]
+        public int outputSampleRate = 16000;
     }
 
     [Serializable]
