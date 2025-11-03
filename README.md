@@ -7,7 +7,8 @@ Minimalistic Unity package that wires OpenAI GPT Realtime and ElevenLabs Voice A
 
 - Basic Realtime Voice AI integration for conversational AI via websockets
 - Tool calls with an easy annotation method of C# code to register the tool with LLM 
-- A simple prefab (a super intelligent sphere) as easy starting point for an LLM driven NPC 
+- Event annotations that broadcast in-game happenings back to the model as structured user messages
+- Sample prefabs (sphere + educational cube) that showcase audio playback, tooling, and event-driven guidance for students
 
 ##  Scope
 **⚠️ WARNING ⚠️: This is just for prototyping and intended to get started. You shouldnt use this to ship anything. Your API key will be stored  as plain text in Assets/VoiceAgent/Resources/VoiceAgentSettings.asset** 
@@ -36,10 +37,12 @@ If someones wants to maintain this feel free to fork it and I will link to your 
 3. Install supporting dependencies via the Unity Package Manager:
    - `com.unity.nuget.newtonsoft-json` (official Json.NET fork, IL2CPP compatible).
    - `https://github.com/endel/NativeWebSocket.git#upm` (WebSocket layer that works on desktop, Android, iOS, Quest).
-4. Open `Voice Agent → Settings` to create `Assets/VoiceAgent/Resources/VoiceAgentSettings.asset`, enter development API keys, and adjust options (model defaults to `gpt-realtime`, semantic VAD behavior, voice, output sample rate).
+4. Open `Voice Agent → Settings` to create `Assets/VoiceAgent/Resources/VoiceAgentSettings.asset`, enter development API keys, and adjust options (model defaults to `gpt-realtime`, semantic VAD behavior, output sample rate). Configure the response **voice** per prefab via the `OpenAiRealtimeController` component.
 5. Drop `OpenAiRealtimeController` on a GameObject (the required mic/audio components are added automatically). On play, the controller will create a fallback `AudioListener` if your scene does not already have one, then stream mic input and play back the model's audio responses in real time. If you need to stop playback, call `CancelActiveResponses()` manually.
    - The built-in streaming queue holds roughly 30 minutes of PCM audio by default; adjust `StreamingAudioPlayer.MaxBufferedSeconds` if you want a different memory/latency trade-off.
-6. Try the sample prefab under `Assets/VoiceAgent/Prefabs/SarcasticSphereAgent.prefab`. It wires in the realtime controller, an audio-reactive scaler, and a tool that lets the model move the sphere along the X-axis (clamped to `[-1, 1]`) using the new annotation system.
+6. Try the sample prefabs under `Assets/VoiceAgent/Prefabs/`:
+   - `SarcasticSphereAgent.prefab` wires in the realtime controller, an audio-reactive scaler, and a tool that lets the model move the sphere along the X-axis (clamped to `[-1, 1]`).
+   - `EducationalCubeAgent.prefab` swaps the sphere for a cube with three clickable mini-cubes. Each click raises a `[RealtimeEvent]`, interrupts playback, and lets the agent guide students through the right sequence while exposing a reset tool.
 7. Read `DEVELOPMENT.md` for coding standards and contribution workflow as they evolve.
 
 ## Function Calling via Annotations

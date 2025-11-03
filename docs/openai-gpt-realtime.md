@@ -18,6 +18,7 @@ Add both via Package Manager before running the OpenAI pipeline.
 - API keys remain in plain text—rotate frequently and avoid checking production secrets into version control.
 - `OpenAiRealtimeSettings.modelId` defaults to `gpt-realtime`.
 - `OpenAiRealtimeSettings.outputSampleRate` controls how playback clips are created (defaults to 24 kHz to match OpenAI's voices).
+- Each `OpenAiRealtimeController` exposes a **Voice Override** field so you can choose a voice per instance. Leave it empty to fall back to the value stored in `VoiceAgentSettings`.
 - Turn detection defaults to **Semantic VAD** with eagerness `low`. The settings asset lets you switch between `None`, `Server VAD`, or `Semantic VAD` and tune the corresponding parameters.
 
 **Runtime Scaffolding (Phase 1)**
@@ -177,7 +178,31 @@ The model will emit tool‑call events on responses; your app runs the function 
 
 ---
 
-## 7) Common server events to expect (non‑exhaustive)
+## 7) Event annotations (user messages)
+
+`[RealtimeEvent]` mirrors the tool annotation flow but is optimized for sending structured user messages back to the model whenever something happens in the scene. Each annotated method becomes an event definition the controller can invoke at runtime.
+
+```csharp
+[RealtimeEvent("Event: user pressed red cube", name: "red_cube_pressed")]
+private void RedCubePressed()
+{
+    // Optional: run local gameplay logic before the message is sent.
+}
+```
+
+Call `OpenAiRealtimeController.PublishEvent("red_cube_pressed")` to raise the event. By default the controller:
+
+- Interrupts any in-flight audio by calling `CancelActiveResponses()`.
+- Creates a `conversation.item.create` payload with role `user` and the attribute’s message (prefixed with `Event:` in our samples so prompts can distinguish them).
+- Sends a follow-up `response.create` so the assistant can react immediately.
+
+If you need to push arbitrary text without an attribute, call `SendUserMessage("Event: ...")` directly—both helpers share the same plumbing so they remain in sync with future API changes.
+
+See `EducationalCubeAgent` and `EducationalCubeButton` for a minimal prefab that lights up coloured cubes, raises `[RealtimeEvent]` messages, and exposes a tool that resets the puzzle.
+
+---
+
+## 8) Common server events to expect (non‑exhaustive)
 
 - `session.created` / `session.updated`
 - `input_audio_buffer.speech_started` / `speech_stopped` (when using server VAD)
@@ -187,7 +212,7 @@ The model will emit tool‑call events on responses; your app runs the function 
 
 ---
 
-## 8) Troubleshooting
+## 9) Troubleshooting
 
 - 4xx during connect → verify **Authorization** header and model id.
 - No audio received → ensure `modalities` include `"audio"` and a **voice** is set before first audio output.

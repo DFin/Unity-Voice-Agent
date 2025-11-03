@@ -39,6 +39,10 @@ namespace DFIN.VoiceAgent.OpenAI
         [Tooltip("Overrides the VoiceAgentSettings system instructions just for this controller instance.")]
         private string sessionInstructionsOverride = DefaultInstructions;
 
+        [SerializeField]
+        [Tooltip("Voice id requested for this controller instance. Leave blank to fall back to project defaults.")]
+        private string voiceOverride = string.Empty;
+
         private OpenAiRealtimeClient client;
         private IRealtimeTransport transport;
         private MicrophoneCapture microphoneCapture;
@@ -48,6 +52,7 @@ namespace DFIN.VoiceAgent.OpenAI
 
         private CancellationTokenSource connectionCts;
         private RealtimeToolRegistry toolRegistry;
+        private RealtimeEventRegistry eventRegistry;
         private OpenAiRealtimeSettings openAiSettings;
 
         private bool isConnected;
@@ -68,9 +73,15 @@ namespace DFIN.VoiceAgent.OpenAI
             microphoneCapture = GetComponent<MicrophoneCapture>();
             audioPlayer = GetComponent<StreamingAudioPlayer>();
 
+            if (string.IsNullOrWhiteSpace(voiceOverride) && openAiSettings != null)
+            {
+                voiceOverride = openAiSettings.voice;
+            }
+
             transport ??= new NativeWebSocketTransport();
             client = new OpenAiRealtimeClient(openAiSettings, transport);
             toolRegistry = new RealtimeToolRegistry();
+            eventRegistry = new RealtimeEventRegistry();
 
             client.Connected += HandleConnected;
             client.Closed += HandleClosed;
@@ -182,6 +193,22 @@ namespace DFIN.VoiceAgent.OpenAI
             }
         }
 
+        public void SetVoice(string voiceId, bool sendUpdate = true)
+        {
+            var normalized = string.IsNullOrWhiteSpace(voiceId) ? string.Empty : voiceId.Trim();
+            if (string.Equals(voiceOverride, normalized, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            voiceOverride = normalized;
+
+            if (sendUpdate && isConnected)
+            {
+                _ = SendSessionUpdateAsync();
+            }
+        }
+
         private string GetResolvedSystemInstructions()
         {
             if (!string.IsNullOrWhiteSpace(sessionInstructionsOverride))
@@ -190,6 +217,21 @@ namespace DFIN.VoiceAgent.OpenAI
             }
 
             return DefaultInstructions;
+        }
+
+        private string GetResolvedVoiceId()
+        {
+            if (!string.IsNullOrWhiteSpace(voiceOverride))
+            {
+                return voiceOverride.Trim();
+            }
+
+            if (openAiSettings != null && !string.IsNullOrWhiteSpace(openAiSettings.voice))
+            {
+                return openAiSettings.voice.Trim();
+            }
+
+            return string.Empty;
         }
 
         private void HandleConnected()
@@ -335,9 +377,10 @@ namespace DFIN.VoiceAgent.OpenAI
                 ["modalities"] = new JArray("audio", "text")
             };
 
-            if (!string.IsNullOrWhiteSpace(openAiSettings.voice))
+            var resolvedVoice = GetResolvedVoiceId();
+            if (!string.IsNullOrWhiteSpace(resolvedVoice))
             {
-                session["voice"] = openAiSettings.voice;
+                session["voice"] = resolvedVoice;
             }
 
             var instructions = GetResolvedSystemInstructions();
@@ -346,7 +389,7 @@ namespace DFIN.VoiceAgent.OpenAI
                 session["instructions"] = instructions;
             }
 
-            toolRegistry?.DiscoverSceneTools();
+            DiscoverSceneMetadata();
             var tools = toolRegistry?.BuildToolSchema();
             if (tools != null && tools.Count > 0)
             {
@@ -687,6 +730,60 @@ namespace DFIN.VoiceAgent.OpenAI
             activeResponses.Clear();
         }
 
+        /// <summary>
+        /// Queues a plain user message in the realtime conversation stream.
+        /// Optionally interrupts in-progress audio and asks the model to respond immediately.
+        /// </summary>
+        public void SendUserMessage(string message, bool interruptResponses = true, bool requestResponse = true)
+        {
+            if (!isConnected || client == null || string.IsNullOrWhiteSpace(message))
+            {
+                return;
+            }
+
+            if (interruptResponses)
+            {
+                CancelActiveResponses();
+            }
+
+            _ = SendUserConversationItemAsync(message, requestResponse);
+        }
+
+        /// <summary>
+        /// Invokes a <see cref="RealtimeEventAttribute"/> definition and forwards the annotated message to the model.
+        /// </summary>
+        public void PublishEvent(string eventName)
+        {
+            if (string.IsNullOrWhiteSpace(eventName))
+            {
+                return;
+            }
+
+            if (eventRegistry == null)
+            {
+                Debug.LogWarning($"[OpenAI Realtime] Unable to publish event '{eventName}' because the registry is unavailable.", this);
+                return;
+            }
+
+            if (!eventRegistry.TryGetEvent(eventName, out var definition))
+            {
+                eventRegistry.DiscoverSceneEvents();
+                if (!eventRegistry.TryGetEvent(eventName, out definition))
+                {
+                    Debug.LogWarning($"[OpenAI Realtime] Event '{eventName}' is not registered.", this);
+                    return;
+                }
+            }
+
+            if (!definition.TryInvoke(out var message, out var error))
+            {
+                Debug.LogWarning($"[OpenAI Realtime] Failed to invoke event '{eventName}': {error}", definition.Target);
+                return;
+            }
+
+            SendUserMessage(message, definition.InterruptResponse, definition.RequestResponse);
+        }
+
         private void SendEvent(JObject payload)
         {
             if (payload == null || client == null)
@@ -695,6 +792,56 @@ namespace DFIN.VoiceAgent.OpenAI
             }
 
             _ = client.SendTextAsync(payload.ToString(), CancellationToken.None);
+        }
+
+        private void DiscoverSceneMetadata()
+        {
+            toolRegistry?.DiscoverSceneTools();
+            eventRegistry?.DiscoverSceneEvents();
+        }
+
+        private async Task SendUserConversationItemAsync(string message, bool requestResponse)
+        {
+            var conversationItem = new JObject
+            {
+                ["type"] = "conversation.item.create",
+                ["item"] = new JObject
+                {
+                    ["type"] = "message",
+                    ["role"] = "user",
+                    ["content"] = new JArray
+                    {
+                        new JObject
+                        {
+                            ["type"] = "input_text",
+                            ["text"] = message.Trim()
+                        }
+                    }
+                }
+            };
+
+            try
+            {
+                await client.SendTextAsync(conversationItem.ToString(), CancellationToken.None);
+
+                if (requestResponse)
+                {
+                    var resume = new JObject
+                    {
+                        ["type"] = "response.create",
+                        ["response"] = new JObject
+                        {
+                            ["conversation"] = "auto"
+                        }
+                    };
+
+                    await client.SendTextAsync(resume.ToString(), CancellationToken.None);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[OpenAI Realtime] Failed to send user message: {ex.Message}", this);
+            }
         }
     }
 }

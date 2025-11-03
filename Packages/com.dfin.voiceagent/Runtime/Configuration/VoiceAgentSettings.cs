@@ -46,7 +46,7 @@ namespace DFIN.VoiceAgent.Configuration
         [Tooltip("Base WebSocket URL used for realtime sessions.")]
         public string endpointUrl = "wss://api.openai.com/v1/realtime";
 
-        [Tooltip("Requested output voice id (OpenAI voice library).")]
+        [Tooltip("Default voice id (OpenAI voice library). Each OpenAiRealtimeController can override this per instance.")]
         public string voice = "alloy";
 
         [Tooltip("Configure how the realtime session detects user turns.")]
