@@ -1,5 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 namespace DFIN.VoiceAgent.OpenAI
 {
@@ -103,6 +106,44 @@ namespace DFIN.VoiceAgent.OpenAI
 
         private bool TryGetPointerScreenPosition(out Vector2 position)
         {
+#if UNITY_INPUT_SYSTEM
+            var pointer = Mouse.current;
+            if (pointer != null && pointer.leftButton.wasPressedThisFrame)
+            {
+                position = pointer.position.ReadValue();
+                return true;
+            }
+
+            var pen = Pen.current;
+            if (pen != null && pen.tip.wasPressedThisFrame)
+            {
+                position = pen.position.ReadValue();
+                return true;
+            }
+
+            var touchscreen = Touchscreen.current;
+            if (touchscreen != null)
+            {
+                foreach (var touch in touchscreen.touches)
+                {
+                    if (touch.phase.ReadValue() == UnityEngine.InputSystem.TouchPhase.Began)
+                    {
+                        position = touch.position.ReadValue();
+                        return true;
+                    }
+                }
+            }
+
+            var pointerDevice = Pointer.current;
+            if (pointerDevice != null && pointerDevice.press.wasPressedThisFrame)
+            {
+                position = pointerDevice.position.ReadValue();
+                return true;
+            }
+
+            position = default;
+            return false;
+#else
             if (Input.touchCount > 0)
             {
                 for (var i = 0; i < Input.touchCount; i++)
@@ -124,6 +165,7 @@ namespace DFIN.VoiceAgent.OpenAI
 
             position = default;
             return false;
+#endif
         }
 
         private void RaycastButton(Vector2 screenPosition)
