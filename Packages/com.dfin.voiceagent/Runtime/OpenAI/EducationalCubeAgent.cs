@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -15,11 +14,32 @@ namespace DFIN.VoiceAgent.OpenAI
         [Tooltip("Explicit realtime controller reference. Auto-populated at runtime if left empty.")]
         private OpenAiRealtimeController controller;
 
+        [SerializeField]
+        [Tooltip("Camera used for raycasting pointer interactions. Defaults to Camera.main if unset.")]
+        private Camera raycastCamera;
+
+        [SerializeField]
+        [Tooltip("Maximum distance (in world units) for pointer raycasts.")]
+        private float pointerMaxDistance = 10f;
+
+        [SerializeField]
+        [Tooltip("Physics layers considered when raycasting for the colored buttons.")]
+        private LayerMask pointerLayerMask = Physics.DefaultRaycastLayers;
+
         private readonly List<EducationalCubeButton> registeredButtons = new();
 
         private void Awake()
         {
             controller ??= GetComponent<OpenAiRealtimeController>();
+            raycastCamera ??= Camera.main;
+        }
+
+        private void Update()
+        {
+            if (TryGetPointerScreenPosition(out var screenPosition))
+            {
+                RaycastButton(screenPosition);
+            }
         }
 
         internal void RegisterButton(EducationalCubeButton button)
@@ -47,7 +67,7 @@ namespace DFIN.VoiceAgent.OpenAI
 
             button.SetHighlighted(true);
 
-            if (controller != null)
+            if (controller != null && !string.IsNullOrWhiteSpace(button.EventName))
             {
                 controller.PublishEvent(button.EventName);
             }
@@ -79,6 +99,51 @@ namespace DFIN.VoiceAgent.OpenAI
         [RealtimeEvent("Event: user pressed blue cube", name: "blue_cube_pressed")]
         private void BlueCubePressedEvent()
         {
+        }
+
+        private bool TryGetPointerScreenPosition(out Vector2 position)
+        {
+            if (Input.touchCount > 0)
+            {
+                for (var i = 0; i < Input.touchCount; i++)
+                {
+                    var touch = Input.GetTouch(i);
+                    if (touch.phase == TouchPhase.Began)
+                    {
+                        position = touch.position;
+                        return true;
+                    }
+                }
+            }
+
+            if (Input.GetMouseButtonDown(0))
+            {
+                position = Input.mousePosition;
+                return true;
+            }
+
+            position = default;
+            return false;
+        }
+
+        private void RaycastButton(Vector2 screenPosition)
+        {
+            var camera = raycastCamera != null ? raycastCamera : Camera.main;
+            if (camera == null)
+            {
+                return;
+            }
+
+            var ray = camera.ScreenPointToRay(screenPosition);
+            var maxDistance = pointerMaxDistance <= 0f ? Mathf.Infinity : pointerMaxDistance;
+
+            if (!Physics.Raycast(ray, out var hit, maxDistance, pointerLayerMask, QueryTriggerInteraction.Ignore))
+            {
+                return;
+            }
+
+            var button = hit.collider.GetComponent<EducationalCubeButton>() ?? hit.collider.GetComponentInParent<EducationalCubeButton>();
+            button?.HandlePointerDown();
         }
     }
 }

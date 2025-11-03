@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 namespace DFIN.VoiceAgent.OpenAI
@@ -59,12 +58,6 @@ namespace DFIN.VoiceAgent.OpenAI
             owner?.UnregisterButton(this);
         }
 
-        private void OnMouseDown()
-        {
-            // Desktop-friendly input: having a collider lets Unity forward left-clicks automatically.
-            owner?.HandleButtonClicked(this);
-        }
-
         public void SetHighlighted(bool highlighted)
         {
             if (materialInstance == null)
@@ -106,8 +99,8 @@ namespace DFIN.VoiceAgent.OpenAI
 
             if (materialInstance.HasProperty("_EmissionColor"))
             {
-                materialInstance.EnableKeyword("_EMISSION");
                 materialInstance.SetColor("_EmissionColor", Color.black);
+                materialInstance.DisableKeyword("_EMISSION");
             }
         }
 
@@ -135,6 +128,11 @@ namespace DFIN.VoiceAgent.OpenAI
                 var emissive = emissionColor * Mathf.LinearToGammaSpace(emissionIntensity);
                 materialInstance.SetColor("_EmissionColor", emissive);
             }
+        }
+
+        internal void HandlePointerDown()
+        {
+            owner?.HandleButtonClicked(this);
         }
     }
 }
