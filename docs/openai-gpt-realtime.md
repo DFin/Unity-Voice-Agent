@@ -200,6 +200,8 @@ If you need to push arbitrary text without an attribute, call `SendUserMessage("
 
 See `EducationalCubeAgent` and `EducationalCubeButton` for a minimal prefab that lights up coloured cubes, raises `[RealtimeEvent]` messages, and exposes a tool that resets the puzzle.
 
+**Tip:** The `OpenAiRealtimeController` inspector exposes **Request Initial Response On Connect**. When enabled (the sample prefabs keep it on), the controller calls `RequestAssistantResponseAsync`, which issues a `response.create` immediately after `session.update` so the assistant can greet the user without waiting for input.
+
 ---
 
 ## 8) Common server events to expect (non‑exhaustive)

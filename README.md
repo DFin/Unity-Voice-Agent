@@ -40,9 +40,10 @@ If someones wants to maintain this feel free to fork it and I will link to your 
 4. Open `Voice Agent → Settings` to create `Assets/VoiceAgent/Resources/VoiceAgentSettings.asset`, enter development API keys, and adjust options (model defaults to `gpt-realtime`, semantic VAD behavior, output sample rate). Configure the response **voice** per prefab via the `OpenAiRealtimeController` component.
 5. Drop `OpenAiRealtimeController` on a GameObject (the required mic/audio components are added automatically). On play, the controller will create a fallback `AudioListener` if your scene does not already have one, then stream mic input and play back the model's audio responses in real time. If you need to stop playback, call `CancelActiveResponses()` manually.
    - The built-in streaming queue holds roughly 30 minutes of PCM audio by default; adjust `StreamingAudioPlayer.MaxBufferedSeconds` if you want a different memory/latency trade-off.
+   - The inspector exposes `Request Initial Response On Connect`; leave it checked if you want an automatic greeting (`response.create`) right after `session.update`, or disable it for a silent start.
 6. Try the sample prefabs under `Assets/VoiceAgent/Prefabs/`:
    - `SarcasticSphereAgent.prefab` wires in the realtime controller, an audio-reactive scaler, and a tool that lets the model move the sphere along the X-axis (clamped to `[-1, 1]`).
-   - `EducationalCubeAgent.prefab` swaps the sphere for a cube with three clickable mini-cubes. Each click raises a `[RealtimeEvent]`, interrupts playback, and lets the agent guide students through the right sequence while exposing a reset tool.
+   - `EducationalCubeAgent.prefab` swaps the sphere for a cube with three clickable mini-cubes. Each click raises a `[RealtimeEvent]`, interrupts playback, and lets the agent guide students through the right sequence while exposing a reset tool. Both prefabs ship with the initial-response toggle enabled so they greet you as soon as Play mode starts.
 7. Read `DEVELOPMENT.md` for coding standards and contribution workflow as they evolve.
 
 ## Function Calling via Annotations
