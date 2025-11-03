@@ -43,6 +43,10 @@ namespace DFIN.VoiceAgent.OpenAI
         [Tooltip("Voice id requested for this controller instance. Leave blank to fall back to project defaults.")]
         private string voiceOverride = string.Empty;
 
+        [SerializeField]
+        [Tooltip("If true, sends response.create immediately after session.update so the assistant can speak without waiting for the user.")]
+        private bool requestInitialResponseOnConnect = true;
+
         private OpenAiRealtimeClient client;
         private IRealtimeTransport transport;
         private MicrophoneCapture microphoneCapture;
@@ -234,12 +238,26 @@ namespace DFIN.VoiceAgent.OpenAI
             return string.Empty;
         }
 
-        private void HandleConnected()
+        private async void HandleConnected()
         {
             Debug.Log("OpenAI realtime connected.");
             isConnected = true;
             activeResponses.Clear();
-            _ = SendSessionUpdateAsync();
+
+            try
+            {
+                await SendSessionUpdateAsync();
+
+                if (requestInitialResponseOnConnect)
+                {
+                    await RequestAssistantResponseAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[OpenAI Realtime] Failed to prime session after connect: {ex.Message}", this);
+            }
+
             audioStream?.Reset();
         }
 
@@ -634,6 +652,36 @@ namespace DFIN.VoiceAgent.OpenAI
         private void HandleAudioSegmentCompleted()
         {
             // currently no-op, placeholder for future callbacks
+        }
+
+        /// <summary>
+        /// Sends a <c>response.create</c> event to the realtime API. This tells the model to immediately generate
+        /// another assistant turn (e.g. a greeting) without waiting for additional user input.
+        /// </summary>
+        private async System.Threading.Tasks.Task RequestAssistantResponseAsync(string conversation = "auto")
+        {
+            if (client == null || !isConnected)
+            {
+                return;
+            }
+
+            var payload = new JObject
+            {
+                ["type"] = "response.create",
+                ["response"] = new JObject
+                {
+                    ["conversation"] = conversation
+                }
+            };
+
+            try
+            {
+                await client.SendTextAsync(payload.ToString(), CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[OpenAI Realtime] Failed to send response.create: {ex.Message}", this);
+            }
         }
 
         private void EnsureBuffers(int sampleCount)
